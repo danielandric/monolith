@@ -55,7 +55,7 @@ private:
 	/** Called when the update zip download completes. */
 	void OnDownloadComplete(const FString& Version, bool bSuccess, const TArray<uint8>& Data);
 
-	/** Extract a zip file to a destination directory using PowerShell. */
+	/** Extract a zip file to a destination directory (platform-appropriate: PowerShell on Windows, tar/unzip on Mac/Linux). */
 	bool ExtractZipToDirectory(const FString& ZipPath, const FString& DestDir);
 
 	/** Get the staging directory path. */

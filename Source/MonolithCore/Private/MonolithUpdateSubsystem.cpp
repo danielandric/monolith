@@ -375,9 +375,12 @@ void UMonolithUpdateSubsystem::OnDownloadComplete(const FString& Version, bool b
 
 bool UMonolithUpdateSubsystem::ExtractZipToDirectory(const FString& ZipPath, const FString& DestDir)
 {
-	// Use PowerShell Expand-Archive (Windows-only for v0.1)
 	FString ConvertedZip = FPaths::ConvertRelativePathToFull(ZipPath);
 	FString ConvertedDest = FPaths::ConvertRelativePathToFull(DestDir);
+
+	int32 ReturnCode = -1;
+
+#if PLATFORM_WINDOWS
 	ConvertedZip.ReplaceInline(TEXT("/"), TEXT("\\"));
 	ConvertedDest.ReplaceInline(TEXT("/"), TEXT("\\"));
 
@@ -386,7 +389,6 @@ bool UMonolithUpdateSubsystem::ExtractZipToDirectory(const FString& ZipPath, con
 		*ConvertedZip, *ConvertedDest
 	);
 
-	int32 ReturnCode = -1;
 	FPlatformProcess::ExecProcess(
 		TEXT("powershell.exe"),
 		*Args,
@@ -400,6 +402,53 @@ bool UMonolithUpdateSubsystem::ExtractZipToDirectory(const FString& ZipPath, con
 		UE_LOG(LogMonolith, Error, TEXT("PowerShell Expand-Archive failed (exit code %d)"), ReturnCode);
 		return false;
 	}
+#elif PLATFORM_MAC || PLATFORM_LINUX
+	// Ensure destination directory exists
+	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+	if (!PlatformFile.DirectoryExists(*ConvertedDest))
+	{
+		PlatformFile.CreateDirectoryTree(*ConvertedDest);
+	}
+
+	FString Args = FString::Printf(
+		TEXT("-xzf \"%s\" -C \"%s\""),
+		*ConvertedZip, *ConvertedDest
+	);
+
+	FPlatformProcess::ExecProcess(
+		TEXT("/usr/bin/tar"),
+		*Args,
+		&ReturnCode,
+		nullptr,
+		nullptr
+	);
+
+	if (ReturnCode != 0)
+	{
+		// Fallback: try unzip for plain .zip files (tar may fail on non-gzipped zips)
+		FString UnzipArgs = FString::Printf(
+			TEXT("-o \"%s\" -d \"%s\""),
+			*ConvertedZip, *ConvertedDest
+		);
+
+		FPlatformProcess::ExecProcess(
+			TEXT("/usr/bin/unzip"),
+			*UnzipArgs,
+			&ReturnCode,
+			nullptr,
+			nullptr
+		);
+
+		if (ReturnCode != 0)
+		{
+			UE_LOG(LogMonolith, Error, TEXT("Failed to extract update archive (tar and unzip both failed, exit code %d)"), ReturnCode);
+			return false;
+		}
+	}
+#else
+	UE_LOG(LogMonolith, Error, TEXT("Update extraction not supported on this platform"));
+	return false;
+#endif
 
 	return true;
 }
