@@ -9,6 +9,7 @@
 #include "Serialization/JsonWriter.h"
 #include "Serialization/JsonSerializer.h"
 #include "JsonObjectConverter.h"
+#include "ScopedTransaction.h"
 
 // --- Registration ---
 
@@ -339,6 +340,23 @@ FMonolithActionResult FMonolithBlueprintCDOActions::HandleSetCDOProperty(const T
 	FString OldValue;
 	Prop->ExportText_Direct(OldValue, ValuePtr, ValuePtr, TargetObject, PPF_None);
 
+	// --- Engine edit cradle (matches Details panel write path) ---
+	// Without this, cross-package TObjectPtr refs survive in memory but get silently
+	// dropped by FLinkerSave's harvest walk on the next save (#29). The Details panel's
+	// IPropertyHandle::SetValueFromFormattedString wraps the write in exactly this cradle:
+	// transaction → Modify → PreEditChange(chain) → write → PostEditChangeChainProperty.
+	// Bug-investigator H1 hypothesis: the engine's edit-side bookkeeping (transaction
+	// buffer, OnObjectModified delegates, FOverridableManager overridden-property map)
+	// must register the change for the harvester to register the import.
+	TargetObject->SetFlags(RF_Transactional);
+	FScopedTransaction Transaction(NSLOCTEXT("MonolithBlueprintCDOActions", "SetCDOProperty", "Monolith Set CDO Property"));
+	TargetObject->Modify();
+
+	FEditPropertyChain PropertyChain;
+	PropertyChain.AddHead(Prop);
+	PropertyChain.SetActivePropertyNode(Prop);
+	TargetObject->PreEditChange(PropertyChain);
+
 	// --- Set the value (JSON-aware for structs/arrays/maps, ImportText for scalars) ---
 	const TSharedPtr<FJsonValue>& JsonVal = Params->TryGetField(TEXT("value"));
 
@@ -354,6 +372,8 @@ FMonolithActionResult FMonolithBlueprintCDOActions::HandleSetCDOProperty(const T
 			Writer->Close();
 			if (JsonStr.Len() > 500) { JsonStr = JsonStr.Left(500) + TEXT("..."); }
 
+			// Cancel the transaction so the failed-write doesn't pollute the undo buffer
+			Transaction.Cancel();
 			return FMonolithActionResult::Error(FString::Printf(
 				TEXT("Failed to set property '%s' from JSON — FJsonObjectConverter rejected the format. "
 					 "Ensure the JSON structure matches the UProperty layout. Preview: %s"),
@@ -380,6 +400,7 @@ FMonolithActionResult FMonolithBlueprintCDOActions::HandleSetCDOProperty(const T
 		const TCHAR* ImportResult = Prop->ImportText_Direct(*ValStr, ValuePtr, TargetObject, PPF_None);
 		if (!ImportResult)
 		{
+			Transaction.Cancel();
 			return FMonolithActionResult::Error(FString::Printf(
 				TEXT("Failed to set property '%s' to value '%s' — ImportText rejected the format. "
 					 "For structs use ImportText syntax e.g. \"(X=1.0,Y=2.0,Z=3.0)\", for enums use the display name."),
@@ -387,20 +408,24 @@ FMonolithActionResult FMonolithBlueprintCDOActions::HandleSetCDOProperty(const T
 		}
 	}
 
+	// --- Fire the post-edit notification chain (this is what registers the change with
+	//     FOverridableManager and OnObjectModified — load-bearing for #29 fix) ---
+	FPropertyChangedEvent ChangedEvent(Prop, EPropertyChangeType::ValueSet);
+	FPropertyChangedChainEvent ChangedChainEvent(PropertyChain, ChangedEvent);
+	TargetObject->PostEditChangeChainProperty(ChangedChainEvent);
+
 	// --- Read back new value for confirmation ---
 	FString NewValue;
 	Prop->ExportText_Direct(NewValue, ValuePtr, ValuePtr, TargetObject, PPF_None);
 
-	// --- Mark dirty + notify ---
+	// --- Mark dirty (PostEditChangeChainProperty handles property-change notifications;
+	//     MarkBlueprintAsModified handles BP-asset-level recompile bookkeeping) ---
 	if (BP)
 	{
 		FBlueprintEditorUtils::MarkBlueprintAsModified(BP);
 	}
 	else
 	{
-		// Notify property change for non-Blueprint UObjects
-		FPropertyChangedEvent ChangedEvent(Prop);
-		TargetObject->PostEditChangeProperty(ChangedEvent);
 		TargetObject->MarkPackageDirty();
 	}
 
