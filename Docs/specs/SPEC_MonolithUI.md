@@ -8,17 +8,17 @@
 
 ## MonolithUI
 
-**Dependencies:** Core, CoreUObject, Engine, MonolithCore, UnrealEd, UMGEditor, UMG, Slate, SlateCore, Json, JsonUtilities, KismetCompiler, MovieScene, MovieSceneTracks. Optional: CommonUI, CommonInput (gates `WITH_COMMONUI`)
-**Total actions:** 92 — 42 UMG baseline + 50 CommonUI conditional on `#if WITH_COMMONUI`
+**Dependencies:** Core, CoreUObject, Engine, MonolithCore, UnrealEd, UMGEditor, UMG, Slate, SlateCore, Json, JsonUtilities, KismetCompiler, MovieScene, MovieSceneTracks
+**Total actions:** 42 (UMG baseline)
 **Settings toggle:** `bEnableUI` (default: True)
 
-**Build.cs notes — conditional CommonUI:** Build.cs detects CommonUI across 3 install vectors (project Plugins/, engine Plugins/Marketplace/, engine Plugins/Runtime/CommonUI). When found, adds `CommonUI` + `CommonInput` deps and sets `WITH_COMMONUI=1`. Otherwise sets `WITH_COMMONUI=0` and the CommonUI action pack compiles to an empty stub. **Release escape hatch:** `MONOLITH_RELEASE_BUILD=1` env var forces detection off (validates the `WITH_COMMONUI=0` path). Mirrors the `MonolithMesh` (v0.14.1) and `MonolithBABridge` patterns.
+> **Coming soon:** A CommonUI action pack (~50 actions across activatable widgets, buttons + styling, input glyphs, focus/nav, lists/tabs, dialogs, audit/lint, accessibility) is planned for a future release. It will gate on `WITH_COMMONUI` via `MonolithUI.Build.cs` detection of the CommonUI engine plugin, mirroring the conditional-dependency pattern used by `MonolithMesh` (GeometryScripting) and `MonolithBABridge` (Blueprint Assist).
 
 ### Classes
 
 | Class | Responsibility |
 |-------|---------------|
-| `FMonolithUIModule` | Registers 42 UMG baseline actions; conditionally invokes `FMonolithCommonUIActions::RegisterAll(Registry)` when `WITH_COMMONUI=1`. Logs the live `ui` namespace action count at startup (no hardcoded total) |
+| `FMonolithUIModule` | Registers 42 UMG baseline actions. Logs the live `ui` namespace action count at startup |
 | `FMonolithUIActions` | Widget blueprint CRUD: create, inspect, add/remove widgets, property writes, compile |
 | `FMonolithUISlotActions` | Layout slot operations: slot properties, anchor presets, widget movement |
 | `FMonolithUITemplateActions` | High-level HUD/menu/panel scaffold templates (8 templates) |
@@ -27,32 +27,6 @@
 | `FMonolithUIBindingActions` | Event/property binding inspection, list view setup, widget binding queries |
 | `FMonolithUISettingsActions` | Settings/save/audio/input remapping subsystem scaffolding (5 scaffolds) |
 | `FMonolithUIAccessibilityActions` | Accessibility subsystem scaffold, audit, colorblind mode, text scale |
-| `FMonolithCommonUIActions` | Public aggregator (header in `Public/CommonUI/`) — `RegisterAll(Registry)` registers all 50 CommonUI actions across 9 categories. Whole class disappears when `WITH_COMMONUI=0` |
-| `MonolithCommonUI::*` (helpers) | Shared Pattern 1/2/3 helpers in `Private/CommonUI/MonolithCommonUIHelpers.{h,cpp}`: `CreateAsset`, `LoadWidgetForMutation`, `CompileAndSaveWidgetBlueprint`, `InvokeRuntimeFunction`, `SetPropertyFromJson`, `GetPIEWorld` |
-
-### CommonUI Action Pack (50 actions, conditional on `WITH_COMMONUI`)
-
-> **Status:** Shipped v0.14.0 (M0.5). 9 categories, 50 actions. All gated on `#if WITH_COMMONUI`. Filter via `monolith_discover({namespace:"ui", category:"CommonUI"})`. Backwards-compatible `RegisterAction` signature carries the new `Category` field; each action emits `category` in `discover()` output JSON.
-
-**A: Activatable Lifecycle (8)** — `create_activatable_widget`, `create_activatable_stack`, `create_activatable_switcher`, `configure_activatable`, `push_to_activatable_stack` [RUNTIME], `pop_activatable_stack` [RUNTIME], `get_activatable_stack_state` [RUNTIME], `set_activatable_transition`
-
-**B: Buttons + Styling (9)** — `convert_button_to_common`, `configure_common_button`, `create_common_button_style`, `create_common_text_style`, `create_common_border_style`, `apply_style_to_widget`, `batch_retheme`, `configure_common_text`, `configure_common_border`
-
-**C: Input / Actions / Glyphs (7)** — `create_input_action_data_table`, `add_input_action_row`, `bind_common_action_widget`, `create_bound_action_bar`, `get_active_input_type` [RUNTIME], `set_input_type_override` [RUNTIME], `list_platform_input_tables`
-
-**D: Navigation / Focus (5)** — `set_widget_navigation`, `set_initial_focus_target`, `force_focus` [RUNTIME], `get_focus_path` [RUNTIME], `request_refresh_focus` [RUNTIME]
-
-**E: Lists / Tabs / Groups (7)** — `setup_common_list_view`, `create_tab_list_widget`, `register_tab` [RUNTIME], `create_button_group` [RUNTIME], `configure_animated_switcher`, `create_widget_carousel`, `create_hardware_visibility_border`
-
-**F: Numeric / Rotator / Lazy (4)** — `configure_numeric_text`, `configure_rotator`, `create_lazy_image`, `create_load_guard`
-
-**G: Dialog / Modal (2)** — `show_common_message` [RUNTIME], `configure_modal_overlay`
-
-**H: Audit + Lint (4)** — `audit_commonui_widget`, `export_commonui_report`, `hot_reload_styles` [RUNTIME, EXPERIMENTAL], `dump_action_router_state` [RUNTIME, EXPERIMENTAL]
-
-**I: Accessibility (4)** — `enforce_focus_ring`, `wrap_with_reduce_motion_gate`, `set_text_scale_binding`, `apply_high_contrast_variant`
-
-> **Known limitations (shipped, documented):** `convert_button_to_common` does NOT auto-transfer UButton children to UCommonButtonBase (UCommonButtonBase uses internal widget tree, not AddChild — callers must rewire manually). `set_initial_focus_target` requires the target WBP to expose a `DesiredFocusTargetName` or `InitialFocusTargetName` FName UPROPERTY and override `NativeGetDesiredFocusTarget`.
 
 ### Actions — UMG Baseline (42 — namespace: "ui")
 

@@ -12,7 +12,7 @@
 
 ## 1. Overview
 
-Monolith is a unified Unreal Engine editor plugin that consolidates 9 separate MCP (Model Context Protocol) servers and 4 C++ plugins into a single plugin with an embedded HTTP MCP server. It reduces ~220 individual tools down to 19 MCP tools (1276 total actions across 16 domains; 1231 active by default — 45 experimental town gen actions disabled; 50 CommonUI actions conditional on WITH_COMMONUI), cutting AI assistant context consumption by ~95%.
+Monolith is a unified Unreal Engine editor plugin that consolidates 9 separate MCP (Model Context Protocol) servers and 4 C++ plugins into a single plugin with an embedded HTTP MCP server. It reduces ~220 individual tools down to 19 MCP tools (1226 total actions across 16 domains; 1181 active by default — 45 experimental town gen actions disabled), cutting AI assistant context consumption by ~95%. A CommonUI action pack (~50 actions, conditional on `WITH_COMMONUI`) is planned for a future release.
 
 ### What It Replaces
 
@@ -43,7 +43,7 @@ Monolith.uplugin
   MonolithConfig        — Config/INI resolution and search (6 actions)
   MonolithIndex         — SQLite FTS5 deep project indexer, 14 internal indexers (7 MCP actions)
   MonolithSource        — Engine source + API lookup (11 actions)
-  MonolithUI            — Widget blueprint CRUD, templates, styling, animation, settings scaffolding, accessibility (42 UMG actions). + 50 CommonUI actions conditional on #if WITH_COMMONUI (activatable widgets, buttons+styling, input glyphs, focus/nav, lists/tabs, dialogs, audit/lint, accessibility). Total: 92 actions.
+  MonolithUI            — Widget blueprint CRUD, templates, styling, animation, settings scaffolding, accessibility (42 UMG actions). A CommonUI action pack (activatable widgets, buttons+styling, input glyphs, focus/nav, lists/tabs, dialogs, audit/lint, accessibility) is planned for a future release.
   MonolithMesh          — Mesh inspection, scene manipulation, spatial queries, level blockout, GeometryScript ops, horror/accessibility, lighting, audio/acoustics, performance, decals, level design, tech art, context props, procedural geometry (sweep walls, auto-collision, proc mesh caching, blueprint prefabs), genre presets, encounter design, accessibility reports (197 core actions) + EXPERIMENTAL procedural town generator (45 actions, disabled by default via bEnableProceduralTownGen) = 242 total
   MonolithGAS           — Gameplay Ability System integration: abilities, attributes, effects, ASC, tags, cues, targets, input, inspection, scaffolding (130 actions). Conditional on #if WITH_GBA
   MonolithComboGraph    — ComboGraph plugin integration: combo graph CRUD, node/edge management, effects, cues, ability scaffolding (13 actions). Conditional on #if WITH_COMBOGRAPH
@@ -100,7 +100,6 @@ Modules that probe for optional plugins follow a unified Build.cs convention: 3-
 |--------|--------------|---------------|---------------|---------------|
 | MonolithBABridge | BlueprintAssist | `WITH_BLUEPRINT_ASSIST` | `MonolithBABridge.Build.cs` | (canonical) |
 | MonolithMesh | GeometryScripting | `WITH_GEOMETRYSCRIPT` | `MonolithMesh.Build.cs` | **v0.14.1** (#26 / #30) |
-| MonolithUI | CommonUI | `WITH_COMMONUI` | `MonolithUI.Build.cs` | v0.14.0 (M0.5) |
 | MonolithGAS | GameplayAbilities | `WITH_GBA` | `MonolithGAS.Build.cs` | (existing) |
 | MonolithComboGraph | ComboGraph | `WITH_COMBOGRAPH` | `MonolithComboGraph.Build.cs` | (existing) |
 | MonolithLogicDriver | Logic Driver Pro | `WITH_LOGICDRIVER` | `MonolithLogicDriver.Build.cs` | (existing) |
@@ -124,7 +123,7 @@ Each module has its own spec file under `specs/`. The table below is the index.
 | 3.7 | MonolithConfig | [specs/SPEC_MonolithConfig.md](specs/SPEC_MonolithConfig.md) | Config/INI resolution and search (6 actions) |
 | 3.8 | MonolithIndex | [specs/SPEC_MonolithIndex.md](specs/SPEC_MonolithIndex.md) | SQLite FTS5 deep project indexer (7 MCP actions, 14 internal indexers) |
 | 3.9 | MonolithSource | [specs/SPEC_MonolithSource.md](specs/SPEC_MonolithSource.md) | Engine source + API lookup (11 actions) |
-| 3.10 | MonolithUI | [specs/SPEC_MonolithUI.md](specs/SPEC_MonolithUI.md) | Widget blueprint CRUD, templates, styling, accessibility (42 UMG + 50 CommonUI conditional = 92 actions) |
+| 3.10 | MonolithUI | [specs/SPEC_MonolithUI.md](specs/SPEC_MonolithUI.md) | Widget blueprint CRUD, templates, styling, accessibility (42 UMG actions; CommonUI pack planned) |
 | 3.11 | MonolithMesh | [specs/SPEC_MonolithMesh.md](specs/SPEC_MonolithMesh.md) | Mesh/scene/spatial/blockout/GeometryScript/procedural (197 core + 45 experimental town gen = 242 actions) |
 | 3.12 | MonolithBABridge | [specs/SPEC_MonolithBABridge.md](specs/SPEC_MonolithBABridge.md) | IModularFeatures bridge for Blueprint Assist (0 MCP actions, integration only) |
 | 3.13 | MonolithGAS | [specs/SPEC_MonolithGAS.md](specs/SPEC_MonolithGAS.md) | Gameplay Ability System integration (130 actions, WITH_GBA) |
