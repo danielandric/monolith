@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.14.4] - 2026-04-24
+
+### Fixed
+
+- **Build error: missing `MonolithPackagePathValidator.h`** ([#35](https://github.com/tumourlove/monolith/issues/35)) — Header was added to working tree but not tracked by git when v0.14.3 was cut. Three modules (`MonolithAI`, `MonolithGAS`, `MonolithUI`) included it, causing `C1083` on clean builds. Now properly tracked. Reported by **@krojew**.
+
+Full diff: [v0.14.3...v0.14.4](https://github.com/tumourlove/monolith/compare/v0.14.3...v0.14.4)
+
 ## [0.14.3] - 2026-04-24
 
 ### Added
