@@ -123,6 +123,8 @@ Also works on: Level Blueprints (map path or `$current`), Widget Blueprints.
 | `Select` / `ForEachLoop` / `ForLoop` / `ForLoopWithBreak` | — | |
 | `DoOnce` / `FlipFlop` / `Gate` | — | Engine macros |
 | `IsValid` / `Delay` / `RetriggerableDelay` | — | |
+| `ComponentBoundEvent` | `component_name`, `delegate_property_name` | "+OnClicked" event entry. Rejects duplicate (component, delegate) BP-wide. Component must be SCS or UMG widget; delegate must be `BlueprintAssignable` multicast on the component class |
+| `AddDelegate` | `delegate_property_name`, `target_class`? | "Bind Event to..." for `BlueprintAssignable` multicast. Defaults to self-context (BP's class); `target_class` accepts bare or prefixed forms |
 | *(any UK2Node_ class)* | — | Generic fallback |
 
 ### Compile & Create (6)

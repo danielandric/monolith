@@ -19,6 +19,9 @@
 #include "K2Node_FunctionEntry.h"
 #include "K2Node_FunctionResult.h"
 #include "K2Node_MacroInstance.h"
+#include "K2Node_ComponentBoundEvent.h"
+#include "K2Node_AddDelegate.h"
+#include "K2Node_BaseMCDelegate.h"
 #include "EdGraphNode_Comment.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
@@ -250,6 +253,36 @@ namespace MonolithBlueprintInternal
 				NObj->SetStringField(TEXT("function_class"), OwnerClass->GetName());
 			}
 		}
+		else if (UK2Node_ComponentBoundEvent* BoundNode = Cast<UK2Node_ComponentBoundEvent>(Node))
+		{
+			NObj->SetStringField(TEXT("component_name"),
+				BoundNode->ComponentPropertyName.ToString());
+			NObj->SetStringField(TEXT("delegate_property_name"),
+				BoundNode->DelegatePropertyName.ToString());
+			NObj->SetStringField(TEXT("event_name"),
+				BoundNode->EventReference.GetMemberName().ToString());
+			if (BoundNode->CustomFunctionName != NAME_None)
+			{
+				NObj->SetStringField(TEXT("custom_name"),
+					BoundNode->CustomFunctionName.ToString());
+			}
+			if (BoundNode->DelegateOwnerClass)
+			{
+				NObj->SetStringField(TEXT("delegate_owner_class"),
+					BoundNode->DelegateOwnerClass->GetName());
+			}
+		}
+		else if (UK2Node_BaseMCDelegate* DelegateNode = Cast<UK2Node_BaseMCDelegate>(Node))
+		{
+			NObj->SetStringField(TEXT("delegate_property_name"),
+				DelegateNode->DelegateReference.GetMemberName().ToString());
+			if (UClass* DelegateOwner = DelegateNode->DelegateReference.GetMemberParentClass())
+			{
+				NObj->SetStringField(TEXT("delegate_owner_class"), DelegateOwner->GetName());
+			}
+			NObj->SetBoolField(TEXT("self_context"),
+				DelegateNode->DelegateReference.IsSelfContext());
+		}
 		else if (UK2Node_Event* EventNode = Cast<UK2Node_Event>(Node))
 		{
 			NObj->SetStringField(TEXT("event_name"),
@@ -470,6 +503,37 @@ namespace MonolithBlueprintInternal
 			*OutAvailablePins = GetAvailablePinNames(Node, Direction);
 		}
 		return nullptr;
+	}
+
+	/**
+	 * Resolve any FObjectProperty by name on a Blueprint's generated class.
+	 * Covers SCS / native ActorComponent subobjects (Actor BPs), UMG named
+	 * widgets (Widget BPs — UButton, UTextBlock, etc.), and plain object-typed
+	 * Blueprint variables — all compile into FObjectProperty entries on the
+	 * generated class. Callers needing component/delegate validation must
+	 * combine this with FindMulticastDelegateProperty (the effective filter).
+	 * Returns null if no FObjectProperty with that name is found, or its
+	 * PropertyClass is null.
+	 */
+	inline FObjectProperty* FindComponentProperty(UBlueprint* BP, FName ComponentName)
+	{
+		if (!BP || !BP->GeneratedClass) return nullptr;
+		FObjectProperty* Prop = FindFProperty<FObjectProperty>(BP->GeneratedClass, ComponentName);
+		if (!Prop || !Prop->PropertyClass) return nullptr;
+		return Prop;
+	}
+
+	/**
+	 * Find a BlueprintAssignable multicast delegate property on a class (or any superclass).
+	 * Returns null if not found or not BlueprintAssignable.
+	 */
+	inline FMulticastDelegateProperty* FindMulticastDelegateProperty(UClass* OwnerClass, FName DelegateName)
+	{
+		if (!OwnerClass) return nullptr;
+		FMulticastDelegateProperty* Prop = FindFProperty<FMulticastDelegateProperty>(OwnerClass, DelegateName);
+		if (!Prop) return nullptr;
+		if (!Prop->HasAnyPropertyFlags(CPF_BlueprintAssignable)) return nullptr;
+		return Prop;
 	}
 
 	/** Returns true if a UK2Node_CustomEvent with the given name already exists in any graph of the Blueprint */
