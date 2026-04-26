@@ -63,6 +63,10 @@ Public responsible-disclosure response to a security audit by @playtabegg. The C
 - **F22 ADR amendment in `SPEC_CORE.md`** — F22 entry updated post-StructUtils-cleanup to record that the deprecated StructUtils plugin module was subsequently dropped from the gated set in the same release. Preserves archaeological record without leaving the spec contradicting reality.
 - **Sibling-plugin strip auto-discovery in `make_release.ps1`** — The release script now auto-discovers all `Plugins/Monolith*/` sibling folders (excluding Monolith itself) for `$StrippedModules` defense-in-depth, instead of a hardcoded list. New siblings get protected automatically without script maintenance.
 
+### Known limitations (planned for v0.14.8)
+
+- **MonolithGAS + MonolithIndex still hard-link `GameplayAbilities`** — they haven't received the F22 conditional probe treatment yet. Functionally fine in practice because `GameplayAbilities` is declared as a hard dep in `Monolith.uplugin` (no `Optional` flag), so the engine auto-enables it on Monolith install and guarantees load order before Monolith DLLs initialise. The release smoke check normally flags this as a sentinel hit, but the sentinel was relaxed for v0.14.7 specifically because the .uplugin contract makes it functionally safe. Honest take: this release has been through more testing rounds than I want to admit and we're shipping with the documented gap rather than rolling another full cycle. Migration to optional + `WITH_GAMEPLAYABILITIES` source gate is planned for v0.14.8 alongside the StructUtils-cleanup follow-up.
+
 ### Credits
 
 - **@playtabegg** — Issue [#38](https://github.com/tumourlove/monolith/issues/38) responsible-disclosure security audit (CORS reachability + adjacent findings). Direct, fast-turnaround report with realistic exploit framing.

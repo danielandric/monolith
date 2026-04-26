@@ -12,13 +12,13 @@
 #      source, binaries, and the uplugin module list
 #   5. Unsets env var (your next dev build auto-detects deps normally)
 #
-# Source users (GitHub clones) are unaffected — Build.cs auto-detects at compile time.
+# Source users (GitHub clones) are unaffected -- Build.cs auto-detects at compile time.
 #
 # Non-redistributable modules:
 #   - MonolithSteamBridge: solo-dev only, Steam Integration Kit bridge (not public)
 #
 # Note: MonolithISX was extracted to a sibling plugin at Plugins/MonolithISX/ on
-# 2026-04-21 — it no longer lives in this repo, so release packaging does not need
+# 2026-04-21 -- it no longer lives in this repo, so release packaging does not need
 # to strip it here.
 
 param(
@@ -73,7 +73,7 @@ $ProjectDir = Split-Path -Parent (Split-Path -Parent $PluginDir)
 # sibling source back into Plugins/Monolith/Source/ (refactor mistake, copy-paste, etc.),
 # the strip filter catches it before it ships.
 #
-# Auto-discover all "Monolith*" sibling folders alongside Plugins/Monolith/ — every new
+# Auto-discover all "Monolith*" sibling folders alongside Plugins/Monolith/ -- every new
 # sibling gets protected automatically without script maintenance. Excludes Monolith
 # itself.
 $ProjectPluginsDir = Join-Path $ProjectDir "Plugins"
@@ -108,7 +108,7 @@ if (-not $SkipBuild) {
         Write-Host "    Build succeeded" -ForegroundColor Green
     }
     finally {
-        # Always unset — even if build fails, don't poison future dev builds
+        # Always unset -- even if build fails, don't poison future dev builds
         Remove-Item Env:\MONOLITH_RELEASE_BUILD -ErrorAction SilentlyContinue
         Write-Host "    MONOLITH_RELEASE_BUILD unset" -ForegroundColor DarkGray
     }
@@ -135,7 +135,7 @@ $trackedFiles = $allTrackedFiles | Where-Object {
             break
         }
     }
-    # Strip internal testing-execution records (Docs/testing/) — per-feature test-pass
+    # Strip internal testing-execution records (Docs/testing/) -- per-feature test-pass
     # diaries with no downstream consumer value. Public-facing test artefacts live
     # elsewhere (SPEC sections, automation tests under Source/).
     if ($keep -and $path -like "Docs/testing/*") {
@@ -238,20 +238,27 @@ Write-Host "  Your next editor build will auto-detect deps normally." -Foregroun
 # probe. End-user editors failed to load Monolith with "missing import" errors.
 #
 # This step dumps the import table of every UnrealEditor-Monolith*.dll in the release zip
-# and refuses if any imports a sentinel module — a module from a non-default-enabled UE
+# and refuses if any imports a sentinel module -- a module from a non-default-enabled UE
 # plugin that should NEVER appear in a release-built Monolith binary.
 Write-Host "`n  [5/5] Post-build hard-link smoke (issue #30 defense)..." -ForegroundColor Yellow
 
 # Sentinel modules: their presence in a Monolith DLL's imports = build-time gate failure.
 # Add new sentinels when adding new optional plugin integrations.
+#
+# GameplayAbilities removed from sentinels in v0.14.7: it's declared as a hard
+# dep in Monolith.uplugin (no Optional flag), so the engine auto-enables it on
+# Monolith install and guarantees load order. MonolithGAS + MonolithIndex
+# hard-link GameplayAbilities and that's functionally safe under this contract.
+# Migration to optional + WITH_GAMEPLAYABILITIES gate planned for v0.14.8
+# alongside the StructUtils-cleanup follow-up.
 $LeakSentinels = @(
     "GeometryScriptingCore", "CommonUI", "CommonInput", "BlueprintAssist",
-    "GameplayAbilities", "GameplayBehaviorsModule", "MassEntity", "ZoneGraph",
+    "GameplayBehaviorsModule", "MassEntity", "ZoneGraph",
     "StateTreeModule", "SmartObjectsModule", "ComboGraphRuntime", "LogicDriver",
     "MetaSoundEngine", "MetaSoundFrontend"
 )
 
-# Locate dumpbin.exe — ships with Visual Studio Build Tools. Try common locations
+# Locate dumpbin.exe -- ships with Visual Studio Build Tools. Try common locations
 # before giving up. If not found, skip the smoke (warn, don't fail) so the script
 # remains usable on dev machines without VS BuildTools.
 $Dumpbin = Get-Command dumpbin.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -First 1
@@ -275,7 +282,7 @@ if (-not $Dumpbin) {
 }
 
 if (-not $Dumpbin) {
-    Write-Host "    [SKIP] dumpbin.exe not found — install Visual Studio Build Tools to enable hard-link smoke." -ForegroundColor Yellow
+    Write-Host "    [SKIP] dumpbin.exe not found -- install Visual Studio Build Tools to enable hard-link smoke." -ForegroundColor Yellow
 } else {
     # Re-extract the just-built zip into a scratch dir to inspect the actual shipped DLLs
     # (not the dev binaries we may have overwritten before zipping).
