@@ -88,10 +88,6 @@
 			"Enabled": true
 		},
 		{
-			"Name": "StructUtils",
-			"Enabled": true
-		},
-		{
 			"Name": "ProceduralMeshComponent",
 			"Enabled": true
 		},

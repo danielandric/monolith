@@ -44,12 +44,14 @@ public class MonolithAI : ModuleRules
 		// StateTree itself contains StateTreeModule + StateTreeEditorModule (UncookedOnly).
 		// GameplayStateTree is a SEPARATE engine plugin that depends on StateTree and
 		// supplies StateTreeAIComponent / BT-to-StateTree task bridge.
-		// PropertyBindingUtils + StructUtils are also separate engine plugins required
-		// by StateTree's binding/instance-data system. We gate all four together under
-		// bHasStateTree because StateTree's own .uplugin lists PropertyBindingUtils as
-		// a required dep, GameplayStateTree.uplugin requires StateTree, and StructUtils
-		// is mandatory for FInstancedStruct used throughout StateTree's task/condition
-		// instance data. Without StateTree the others are dead weight.
+		// PropertyBindingUtils is also a separate engine plugin required by
+		// StateTree's binding/instance-data system. We gate the StateTree family
+		// together under bHasStateTree because StateTree's own .uplugin lists
+		// PropertyBindingUtils as a required dep and GameplayStateTree.uplugin
+		// requires StateTree. Without StateTree the others are dead weight.
+		// (Historical: the StructUtils plugin was previously listed here but is
+		// deprecated since UE 5.5 — FInstancedStruct relocated into CoreUObject
+		// and resolves transparently via the existing CoreUObject Public dep above.)
 		bool bHasStateTree = false;
 		if (!bReleaseBuild)
 		{
@@ -82,8 +84,7 @@ public class MonolithAI : ModuleRules
 			{
 				"StateTreeModule", "StateTreeEditorModule",
 				"GameplayStateTreeModule",
-				"PropertyBindingUtils",
-				"StructUtils"
+				"PropertyBindingUtils"
 			});
 			PublicDefinitions.Add("WITH_STATETREE=1");
 		}
