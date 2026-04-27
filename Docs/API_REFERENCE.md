@@ -4,7 +4,7 @@
 
 **In-tree action total: 1286** registered across **16 in-tree namespaces** (1241 active by default; 45 town-gen actions are experimental and disabled until you flip `bEnableProceduralTownGen=true`). The `ui` namespace re-exports 4 GAS UI binding actions as aliases, so the count of **distinct handlers is 1282**.
 
-Live editor introspection on a fully loaded project (with all sibling plugins present) reports **1462 actions across 20 namespaces** — that's the in-tree 1286 plus 176 actions from sibling plugins (`inventory` 158, `steam` 28, `claudedesign` 11, minus a 21-action shape mismatch that surfaces only via discover; the canonical per-plugin counts in §Sibling Plugins below are what ships in those repos). Sibling plugins are documented separately — see [§Sibling Plugins](#sibling-plugins).
+Live editor introspection on a fully loaded project (with sibling plugins present) can report additional namespaces beyond the in-tree Monolith surface. Those actions ship in their owning sibling repositories and are documented separately — see [§Sibling Plugins](#sibling-plugins).
 
 > Auto-generated and hand-curated. Each action is dispatched via HTTP POST to `http://localhost:<port>` with JSON body `{ "namespace": "<ns>", "action": "<action>", "params": { ... } }`, or via the MCP `tools/list` surface that AI clients see at session start.
 >
@@ -33,7 +33,7 @@ Live editor introspection on a fully loaded project (with all sibling plugins pr
 | [logicdriver](#logicdriver) | 66 | Logic Driver Pro state machines: graph CRUD, runtime PIE control, scaffolds, dialogue (conditional on `WITH_LOGICDRIVER`) |
 | [audio](#audio) | 86 | Sound Cue + MetaSound graph CRUD, attenuation/class/mix/submix/concurrency, batch ops, Sound Cue templates, perception bindings |
 | **In-tree subtotal** | **1286** | (1241 default + 45 experimental town gen) |
-| [Sibling plugins](#sibling-plugins) | +176 | `inventory`, `steam`, `claudedesign` — separate plugins, separate distribution |
+| [Sibling plugins](#sibling-plugins) | varies | Separate plugins, separate distribution |
 
 ---
 
