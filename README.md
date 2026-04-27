@@ -283,7 +283,7 @@ Monolith.uplugin
   MonolithAudio         — Audio asset CRUD, Sound Cue + MetaSound graph building, batch ops, templates, AI perception binding, sine test wave (86 actions)
   MonolithAudioRuntime  — Runtime sub-module supplying perception classes for audio.bind_sound_to_perception (0 MCP actions)
   MonolithBABridge      — Blueprint Assist integration bridge (0 MCP actions — IModularFeatures only)
-  MonolithLevelSequence — Level Sequence Director Blueprint introspection: directors, functions/variables, event-track bindings (Possessable/Spawnable/master), cross-sequence reverse lookup (7 actions)
+  MonolithLevelSequence — Level Sequence introspection: full per-LS binding inventory (legacy Possessable/Spawnable + UE 5.7 UMovieSceneCustomBinding family), Director Blueprint functions/variables, event-track bindings, cross-sequence reverse lookup (8 actions)
 
 Standalone Tools (in Binaries/)
   monolith_proxy.exe    — MCP stdio-to-HTTP proxy (zero UE dependency, WinHTTP + nlohmann/json)
@@ -315,7 +315,7 @@ Standalone Tools (in Binaries/)
 | `config` | `config_query` | 6 | INI resolution, explain, diff, search |
 | `project` | `project_query` | 7 | Deep project search — FTS5 across all indexed assets including marketplace plugins |
 | `source` | `source_query` | 11 | Native C++ engine source lookup, call graphs, class hierarchy, project reindex, hot-reload-aware refresh |
-| `level_sequence` | `level_sequence_query` | 7 | Level Sequence Director Blueprint inspection: directors, own functions (user / custom_event / sequencer_endpoint), variables (name + K2-formatted type), event-track bindings grouped by Possessable/Spawnable/master GUID, cross-sequence reverse lookup of function callers |
+| `level_sequence` | `level_sequence_query` | 8 | Level Sequence inspection: full binding inventory (one row per Guid×BindingIndex with kind classification — legacy Possessable/Spawnable + UE 5.7 UMovieSceneSpawnableActorBinding / Replaceable / Custom), Director Blueprint own functions (user / custom_event / sequencer_endpoint) and variables, event-track bindings with Director-function resolution, cross-sequence reverse lookup of function callers |
 
 ---
 
@@ -472,7 +472,7 @@ Monolith bundles 16 Claude Code skills in `Skills/` — domain-specific workflow
 | `unreal-gas` | Gameplay Ability System — abilities, effects, attributes, ASC, tags, cues |
 | `unreal-logicdriver` | Logic Driver Pro state machines — SM CRUD, graph editing, JSON spec, scaffolding |
 | `unreal-combograph` | ComboGraph combo trees — graph CRUD, nodes, edges, effects, ability scaffolding |
-| `unreal-level-sequences` | Level Sequence Director Blueprint inspection — directors, functions/variables, event-track bindings, cross-sequence reverse lookup |
+| `unreal-level-sequences` | Level Sequence inspection — full binding inventory (legacy + UE 5.7 custom bindings), Director Blueprint functions/variables, event-track bindings, cross-sequence reverse lookup |
 | `unreal-debugging` | Build errors, log search, crash context |
 | `unreal-performance` | Config auditing, shader stats, INI tuning |
 | `unreal-project-search` | FTS5 search syntax, reference tracing |
