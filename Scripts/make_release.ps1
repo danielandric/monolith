@@ -251,11 +251,16 @@ Write-Host "`n  [5/5] Post-build hard-link smoke (issue #30 defense)..." -Foregr
 # hard-link GameplayAbilities and that's functionally safe under this contract.
 # Migration to optional + WITH_GAMEPLAYABILITIES gate planned for v0.14.8
 # alongside the StructUtils-cleanup follow-up.
+#
+# External optional widget runtime sentinel: MonolithUI must stay decoupled from
+# provider plugins. Exact module-name sentinels below catch accidental hard DLL
+# imports before the public zip ships.
 $LeakSentinels = @(
     "GeometryScriptingCore", "CommonUI", "CommonInput", "BlueprintAssist",
     "GameplayBehaviorsModule", "MassEntity", "ZoneGraph",
     "StateTreeModule", "SmartObjectsModule", "ComboGraphRuntime", "LogicDriver",
-    "MetaSoundEngine", "MetaSoundFrontend"
+    "MetaSoundEngine", "MetaSoundFrontend",
+    "TokenforgeRuntime"
 )
 
 # Locate dumpbin.exe -- ships with Visual Studio Build Tools. Try common locations
