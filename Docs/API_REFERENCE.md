@@ -850,15 +850,10 @@ If you're building a sibling plugin yourself, read `Plugins/Monolith/Docs/SIBLIN
 | **MonolithISX** | `inventory` | 158 | Bridges InventorySystemX (paid Fab plugin). Editor + runtime PIE actions. Conditional on the InventorySystemX dep. | Separate plugin, sits at `Plugins/MonolithISX/` |
 | **MonolithSteamBridge** | `steam` | 28 | Bridges Steam Integration Kit (paid Fab plugin). Solo-dev only — not in public Monolith releases. `MONOLITH_RELEASE_BUILD=1` strips it. | `Plugins/MonolithSteamBridge/` |
 | **MonolithSteamBridgeLeaderboard** | (folds into `steam`) | (subset) | Phase 2 sub-module that unlocks full-fidelity leaderboard upload/download by splitting from the gated USTRUCT-in-UFUNCTION block. | `Plugins/MonolithSteamBridgeLeaderboard/` |
-| **MonolithClaudeDesignBridge** | `claudedesign` | 11 | Claude Design → UMG bridge. Capture widgets, import generated textures, transpile Tailwind-ish CSS, font import, animation authoring with bezier easing and bound events. | `Plugins/MonolithClaudeDesignBridge/` |
 
 **Why these aren't in the in-tree count:** the in-tree 1286/16 figure counts only modules shipped inside the public `Monolith-vX.Y.Z.zip` release. Sibling plugins live in their own folders, ship via their own channels (or stay private), and may or may not be installed in any given consumer's project. Their absence is not a degraded state — Monolith is fully functional without them.
 
-**Claude Design Bridge** (the only sibling plugin distributed publicly today) lives in its own repo with its own release cadence. Its 11 actions:
-
-`capture_widget`, `import_texture_from_bytes`, `set_rounded_corners`, `create_gradient_mid_from_spec`, `apply_box_shadow`, `import_font_family`, `create_animation_v2`, `add_bezier_eased_segment`, `bake_spring_animation`, `add_animation_event_track`, `bind_animation_to_event`.
-
-For full param schemas, call `monolith_discover("claudedesign")` at runtime when the bridge plugin is installed.
+Private sibling bridges are intentionally omitted from the public API reference. Their action rosters, namespaces, and release notes belong in their own repos/channels; Monolith must not publish them as part of the public API surface.
 
 ---
 

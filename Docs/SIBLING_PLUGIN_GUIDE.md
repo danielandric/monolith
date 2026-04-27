@@ -363,7 +363,7 @@ Two distribution scenarios:
 | **MonolithISX** | private repo | InventorySystemX (paid Fab plugin) | `inventory` | 158 actions. Lives at `Plugins/MonolithISX/`. Source + per-module specs private; existence acknowledged in `SPEC_CORE.md`. |
 | **MonolithSteamBridge** | private repo | Steam Integration Kit (paid Fab plugin) | `steam` | 28 actions across 7 subsystems (Achievement, Cloud, Infra, Leaderboard, Overlay, Stat, UserAuth). Composed with `MonolithSteamBridgeLeaderboard` sibling for full-fidelity leaderboard upload/download (UHT + SIK USTRUCT workaround). Source + per-module specs private; existence acknowledged in `SPEC_CORE.md`. |
 | **MonolithSubstance** | private repo | Adobe Substance (Marketplace plugin) | `substance` | 26 actions. Build.cs uses **4-location detection** (`project_runtime`, `project_root`, `engine_marketplace` recursive scan, `engine_runtime`) with helper struct + console logging — see "Advanced detection variant" below. Marks Adobe Substance as `Optional: true` in .uplugin. |
-| **MonolithClaudeDesignBridge** | private repo | TokenforgeRuntime (project-internal) | `claudedesign` | 11 actions. Bridges Claude Design HTML/Handoff Bundle exports into UMG Widget Blueprints. UMG capture, texture/font import, gradient MIDs, box shadows, rounded corners, animation v2. Marks TokenforgeRuntime as `Optional: true`. |
+| Private UI bridge | private repo | External design/runtime stack | Custom namespace | Keep the action roster, provider names, and implementation spec out of public Monolith docs. Depend on Monolith privately; Monolith must not depend on the bridge. |
 
 ### Advanced detection variant — `MonolithSubstance` template
 
