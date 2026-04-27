@@ -57,7 +57,7 @@ Monolith.uplugin
 **Custom sibling plugins (not inside core Monolith — source + per-module specs are private to their respective repos):**
 - **MonolithISX** — InventorySystemX integration, 158 actions, `inventory` namespace, conditional on InventorySystemX. Extracted 2026-04-21 to `Plugins/MonolithISX/`. Totals above do NOT include these 158 actions.
 - **MonolithSteamBridge** — Steam Integration Kit integration, 28 actions, `steam` namespace, conditional on SIK. Lives at `Plugins/MonolithSteamBridge/` (+ `Plugins/MonolithSteamBridgeLeaderboard/` for full-fidelity leaderboard fidelity). Totals above do NOT include these 28 actions.
-- **MonolithClaudeDesignBridge** — Claude Design → UMG bridge, 11 actions, `claudedesign` namespace, conditional on the bridge plugin (M3.5 Transpiler Fidelity shipped 2026-04-25). Totals above do NOT include these 11 actions.
+Additional project-specific sibling plugins may register their own namespaces outside this repository. They are intentionally excluded from public Monolith action counts and release packages; their source, action rosters, and module specs belong in their own repos.
 
 For the architectural pattern that lets you write your own sibling plugin and register actions into Monolith's MCP registry from outside the core repo, see [`SIBLING_PLUGIN_GUIDE.md`](SIBLING_PLUGIN_GUIDE.md).
 
