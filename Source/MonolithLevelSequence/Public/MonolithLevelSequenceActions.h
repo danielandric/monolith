@@ -61,4 +61,10 @@ public:
 	 * glob narrows the search.
 	 */
 	static FMonolithActionResult FindDirectorFunctionCallers(const TSharedPtr<FJsonObject>& Params);
+
+	/**
+	 * List a Director's variables (name + K2-schema-formatted type) in
+	 * declaration order. Variables come from DirBP->NewVariables.
+	 */
+	static FMonolithActionResult ListDirectorVariables(const TSharedPtr<FJsonObject>& Params);
 };

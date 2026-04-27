@@ -57,6 +57,13 @@ void FMonolithLevelSequenceActions::RegisterActions(FMonolithToolRegistry& Regis
 			.Required(TEXT("function_name"), TEXT("string"), TEXT("Exact function name to search (case-sensitive). Examples: \"Start\", \"SequenceEvent__ENTRYPOINTLS_Foo_DirectorBP_0\""))
 			.Optional(TEXT("asset_path_filter"), TEXT("string"), TEXT("Glob pattern (* and ?) restricting matches to LS paths matching this pattern"))
 			.Build());
+
+	Registry.RegisterAction(TEXT("level_sequence"), TEXT("list_director_variables"),
+		TEXT("List a Director's variables (name + K2-schema-formatted type) in declaration order. Variables come from DirBP->NewVariables and follow the same own-only convention as functions (no inherited base-class properties)."),
+		FMonolithActionHandler::CreateStatic(&FMonolithLevelSequenceActions::ListDirectorVariables),
+		FParamSchemaBuilder()
+			.Required(TEXT("asset_path"), TEXT("string"), TEXT("Full Level Sequence asset path"))
+			.Build());
 }
 
 // ============================================================================
@@ -691,5 +698,81 @@ FMonolithActionResult FMonolithLevelSequenceActions::FindDirectorFunctionCallers
 	}
 	Result->SetArrayField(TEXT("callers"), Callers);
 	Result->SetNumberField(TEXT("count"), Callers.Num());
+	return FMonolithActionResult::Success(Result);
+}
+
+FMonolithActionResult FMonolithLevelSequenceActions::ListDirectorVariables(const TSharedPtr<FJsonObject>& Params)
+{
+	if (!GEditor)
+	{
+		return FMonolithActionResult::Error(TEXT("GEditor not available"));
+	}
+
+	UMonolithIndexSubsystem* IndexSS = GEditor->GetEditorSubsystem<UMonolithIndexSubsystem>();
+	if (!IndexSS || !IndexSS->GetDatabase())
+	{
+		return FMonolithActionResult::Error(TEXT("Index database not ready"));
+	}
+
+	FSQLiteDatabase* RawDB = IndexSS->GetDatabase()->GetRawDatabase();
+	if (!RawDB)
+	{
+		return FMonolithActionResult::Error(TEXT("Raw SQLite database not available"));
+	}
+
+	FString AssetPath;
+	if (!Params->TryGetStringField(TEXT("asset_path"), AssetPath) || AssetPath.IsEmpty())
+	{
+		return FMonolithActionResult::Error(TEXT("asset_path is required"));
+	}
+
+	// Probe the director exists so we can distinguish "no Director / wrong path"
+	// from "Director with no variables".
+	bool bDirectorKnown = false;
+	{
+		FSQLitePreparedStatement Probe;
+		Probe.Create(*RawDB, TEXT("SELECT 1 FROM level_sequence_directors WHERE ls_path = ?"));
+		Probe.SetBindingValueByIndex(1, AssetPath);
+		bDirectorKnown = (Probe.Step() == ESQLitePreparedStatementStepResult::Row);
+		Probe.Destroy();
+	}
+	if (!bDirectorKnown)
+	{
+		return FMonolithActionResult::Error(FString::Printf(
+			TEXT("No Level Sequence Director indexed for path '%s'"), *AssetPath));
+	}
+
+	// ORDER BY v.id preserves insertion order, which mirrors DirBP->NewVariables
+	// declaration order in the editor — more useful than alphabetical.
+	FSQLitePreparedStatement Stmt;
+	if (!Stmt.Create(*RawDB, TEXT(
+		"SELECT v.name, v.type "
+		"FROM level_sequence_director_variables v "
+		"JOIN level_sequence_directors d ON v.director_id = d.id "
+		"WHERE d.ls_path = ? "
+		"ORDER BY v.id")))
+	{
+		return FMonolithActionResult::Error(TEXT("Failed to prepare list_director_variables SQL"));
+	}
+	Stmt.SetBindingValueByIndex(1, AssetPath);
+
+	TArray<TSharedPtr<FJsonValue>> Rows;
+	while (Stmt.Step() == ESQLitePreparedStatementStepResult::Row)
+	{
+		FString Name, Type;
+		Stmt.GetColumnValueByIndex(0, Name);
+		Stmt.GetColumnValueByIndex(1, Type);
+
+		auto Obj = MakeShared<FJsonObject>();
+		Obj->SetStringField(TEXT("name"), Name);
+		Obj->SetStringField(TEXT("type"), Type);
+		Rows.Add(MakeShared<FJsonValueObject>(Obj));
+	}
+	Stmt.Destroy();
+
+	auto Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("ls_path"), AssetPath);
+	Result->SetArrayField(TEXT("variables"), Rows);
+	Result->SetNumberField(TEXT("count"), Rows.Num());
 	return FMonolithActionResult::Success(Result);
 }
