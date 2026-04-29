@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **`editor.run_automation_tests` + `editor.list_automation_tests` actions** — Run / enumerate UE automation tests by full-path prefix (e.g. `MazeLegends.Bow`) via `FAutomationTestFramework` from inside the running editor. No PIE, no commandlet, no second editor process — sidesteps the `.uproject` file-lock that prevents `UnrealEditor -ExecCmds="Automation RunTests <prefix>"` from running while the editor is open. Returns a structured JSON summary (`success`, `total`, `passed`, `failed`, `skipped`) plus per-test results with error messages so agents can drive a regression suite end-to-end (e.g. "lock down a calibrated weapon's data-asset values; assert across edits"). Editor action count: 22 → 24. PR by **@MaxenceEpitech**.
+
 ## [0.14.7] - 2026-04-26
 
 This release rolls up four work-streams: (1) responsible-disclosure security response to [#38](https://github.com/tumourlove/monolith/issues/38) (CORS lockdown, MCP kill-switch, auto-update SHA256 verification, default-off auto-update); (2) **F22 P0 SmartObjects + StateTree gating retrofit** — closes the same class of bug as [#30](https://github.com/tumourlove/monolith/issues/30) and [#32](https://github.com/tumourlove/monolith/issues/32) where end users hit C1083/LNK2019 on plugins they hadn't enabled in their `.uproject`; (3) the Phase J fix sprint (audio/BT/GAS validation + observability + spec corrections); (4) StructUtils deprecation cleanup post-F22 — the deprecated plugin's headers relocated into CoreUObject in 5.5+. Plus PR [#37](https://github.com/tumourlove/monolith/pull/37) (community contribution by @MaxenceEpitech: anim graph property setter + native-component overrides + extended HTTP retry), the CommonUI M0.5 action pack (50 new actions), and PR [#39](https://github.com/tumourlove/monolith/pull/39) by @danielandric (recursive cradle sub-case + walker unification).

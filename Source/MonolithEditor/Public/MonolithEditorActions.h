@@ -70,6 +70,10 @@ public:
 	static FMonolithActionResult HandleStitchFlipbook(const TSharedPtr<FJsonObject>& Params);
 	static FMonolithActionResult HandleDeleteAssets(const TSharedPtr<FJsonObject>& Params);
 
+	// --- Automation tests ---
+	static FMonolithActionResult HandleRunAutomationTests(const TSharedPtr<FJsonObject>& Params);
+	static FMonolithActionResult HandleListAutomationTests(const TSharedPtr<FJsonObject>& Params);
+
 	static void OnLiveCodingPatchComplete();
 
 private:

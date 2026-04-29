@@ -8,6 +8,7 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Misc/App.h"
+#include "Misc/AutomationTest.h"
 
 #if PLATFORM_WINDOWS
 #include "ILiveCodingModule.h"
@@ -432,6 +433,21 @@ void FMonolithEditorActions::RegisterActions(FMonolithLogCapture* LogCapture)
 			.Optional(TEXT("resolution"), TEXT("integer"), TEXT("Output resolution width/height in pixels (default: 256)"))
 			.Optional(TEXT("output_path"), TEXT("string"), TEXT("Output directory (default: Saved/Screenshots/Monolith/GIF_<timestamp>)"))
 			.Optional(TEXT("encoder"), TEXT("string"), TEXT("frames_only (default), ffmpeg, or python — opt-in GIF encoding"))
+			.Build());
+
+	Registry.RegisterAction(TEXT("editor"), TEXT("list_automation_tests"),
+		TEXT("List all registered automation tests, optionally filtered by prefix"),
+		FMonolithActionHandler::CreateStatic(&HandleListAutomationTests),
+		FParamSchemaBuilder()
+			.Optional(TEXT("prefix"), TEXT("string"), TEXT("Filter tests whose full path starts with this prefix (e.g. 'MazeLegends.Bow')"))
+			.Build());
+
+	Registry.RegisterAction(TEXT("editor"), TEXT("run_automation_tests"),
+		TEXT("Run automation tests by prefix in the running editor (no PIE, no separate process). Returns success/passed/failed counts and per-test errors."),
+		FMonolithActionHandler::CreateStatic(&HandleRunAutomationTests),
+		FParamSchemaBuilder()
+			.Required(TEXT("prefix"), TEXT("string"), TEXT("Run tests whose full path starts with this prefix (e.g. 'MazeLegends.Bow')"))
+			.Optional(TEXT("max_tests"), TEXT("integer"), TEXT("Hard cap on number of tests to run (default: 200)"))
 			.Build());
 
 	InitLiveCodingDelegate();
@@ -2432,6 +2448,175 @@ FMonolithActionResult FMonolithEditorActions::HandleCaptureSystemGif(
 			Result->SetStringField(TEXT("encoder_error"),
 				FString::Printf(TEXT("Unknown encoder '%s'. Valid: frames_only, ffmpeg, python"), *Encoder));
 		}
+	}
+
+	return FMonolithActionResult::Success(Result);
+}
+
+// --- Automation tests ---
+//
+// `list_automation_tests` and `run_automation_tests` use the engine's automation
+// framework (`FAutomationTestFramework`) to enumerate and execute tests inside the
+// already-running editor process. No PIE, no commandlet, no second editor instance.
+//
+// `run_automation_tests` only handles tests that complete synchronously inside
+// `StartTestByName + StopTest` (which is the case for SimpleAutomationTest macros).
+// Latent / async tests (TickTests-driven) are skipped with a clear note so the
+// caller knows they were not exercised.
+
+namespace MonolithAutomationDetail
+{
+	static FString GetTestFullPath(const FAutomationTestInfo& Info)
+	{
+#if ENGINE_MAJOR_VERSION >= 5
+		return Info.GetFullTestPath();
+#else
+		return Info.GetTestName();
+#endif
+	}
+
+	static void CollectMatchingTests(const FString& Prefix, TArray<FAutomationTestInfo>& OutTests)
+	{
+		FAutomationTestFramework& Framework = FAutomationTestFramework::Get();
+
+		// Force-load latest test list (covers tests added since the editor started).
+		Framework.LoadTestModules();
+
+		TArray<FAutomationTestInfo> AllTests;
+		Framework.GetValidTestNames(AllTests);
+
+		for (const FAutomationTestInfo& Info : AllTests)
+		{
+			const FString FullPath = GetTestFullPath(Info);
+			if (Prefix.IsEmpty() || FullPath.StartsWith(Prefix))
+			{
+				OutTests.Add(Info);
+			}
+		}
+	}
+}
+
+FMonolithActionResult FMonolithEditorActions::HandleListAutomationTests(const TSharedPtr<FJsonObject>& Params)
+{
+	FString Prefix;
+	if (Params.IsValid())
+	{
+		Params->TryGetStringField(TEXT("prefix"), Prefix);
+	}
+
+	TArray<FAutomationTestInfo> Tests;
+	MonolithAutomationDetail::CollectMatchingTests(Prefix, Tests);
+
+	TArray<TSharedPtr<FJsonValue>> TestsJson;
+	TestsJson.Reserve(Tests.Num());
+	for (const FAutomationTestInfo& Info : Tests)
+	{
+		TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
+		Obj->SetStringField(TEXT("full_path"), MonolithAutomationDetail::GetTestFullPath(Info));
+		Obj->SetStringField(TEXT("display_name"), Info.GetDisplayName());
+		Obj->SetStringField(TEXT("test_name"), Info.GetTestName());
+		Obj->SetNumberField(TEXT("flags"), static_cast<double>(static_cast<uint32>(Info.GetTestFlags())));
+		TestsJson.Add(MakeShared<FJsonValueObject>(Obj));
+	}
+
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("prefix"), Prefix);
+	Result->SetNumberField(TEXT("count"), Tests.Num());
+	Result->SetArrayField(TEXT("tests"), TestsJson);
+	return FMonolithActionResult::Success(Result);
+}
+
+FMonolithActionResult FMonolithEditorActions::HandleRunAutomationTests(const TSharedPtr<FJsonObject>& Params)
+{
+	FString Prefix;
+	if (!Params.IsValid() || !Params->TryGetStringField(TEXT("prefix"), Prefix) || Prefix.IsEmpty())
+	{
+		return FMonolithActionResult::Error(TEXT("Required parameter: prefix (string, e.g. 'MazeLegends.Bow')"));
+	}
+
+	int32 MaxTests = 200;
+	if (Params.IsValid())
+	{
+		double MaxNum = MaxTests;
+		if (Params->TryGetNumberField(TEXT("max_tests"), MaxNum))
+		{
+			MaxTests = FMath::Max(1, FMath::FloorToInt(MaxNum));
+		}
+	}
+
+	TArray<FAutomationTestInfo> MatchingTests;
+	MonolithAutomationDetail::CollectMatchingTests(Prefix, MatchingTests);
+
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("prefix"), Prefix);
+
+	if (MatchingTests.Num() == 0)
+	{
+		Result->SetBoolField(TEXT("success"), false);
+		Result->SetNumberField(TEXT("total"), 0);
+		Result->SetNumberField(TEXT("passed"), 0);
+		Result->SetNumberField(TEXT("failed"), 0);
+		Result->SetStringField(TEXT("message"),
+			FString::Printf(TEXT("No tests matching prefix '%s' (call list_automation_tests for available tests)"), *Prefix));
+		return FMonolithActionResult::Success(Result);
+	}
+
+	const int32 TestsToRun = FMath::Min(MaxTests, MatchingTests.Num());
+
+	FAutomationTestFramework& Framework = FAutomationTestFramework::Get();
+
+	TArray<TSharedPtr<FJsonValue>> ResultsJson;
+	int32 Passed = 0;
+	int32 Failed = 0;
+	int32 Skipped = 0;
+
+	for (int32 i = 0; i < TestsToRun; ++i)
+	{
+		const FAutomationTestInfo& Info = MatchingTests[i];
+		const FString FullPath = MonolithAutomationDetail::GetTestFullPath(Info);
+
+		TSharedPtr<FJsonObject> TestResult = MakeShared<FJsonObject>();
+		TestResult->SetStringField(TEXT("full_path"), FullPath);
+
+		Framework.StartTestByName(FullPath, /*RoleIndex=*/0);
+
+		FAutomationTestExecutionInfo ExecInfo;
+		const bool bCompleted = Framework.StopTest(ExecInfo);
+		const bool bSuccess = bCompleted && (ExecInfo.GetErrorTotal() == 0);
+
+		TestResult->SetStringField(TEXT("status"), bSuccess ? TEXT("passed") : TEXT("failed"));
+		TestResult->SetNumberField(TEXT("duration_seconds"), ExecInfo.Duration);
+		TestResult->SetNumberField(TEXT("error_count"), ExecInfo.GetErrorTotal());
+		TestResult->SetNumberField(TEXT("warning_count"), ExecInfo.GetWarningTotal());
+
+		// Capture error messages for visibility.
+		if (ExecInfo.GetErrorTotal() > 0)
+		{
+			TArray<TSharedPtr<FJsonValue>> ErrorsJson;
+			for (const FAutomationExecutionEntry& Entry : ExecInfo.GetEntries())
+			{
+				if (Entry.Event.Type == EAutomationEventType::Error)
+				{
+					ErrorsJson.Add(MakeShared<FJsonValueString>(Entry.Event.Message));
+				}
+			}
+			TestResult->SetArrayField(TEXT("errors"), ErrorsJson);
+		}
+
+		if (bSuccess) Passed++; else Failed++;
+		ResultsJson.Add(MakeShared<FJsonValueObject>(TestResult));
+	}
+
+	Result->SetBoolField(TEXT("success"), Failed == 0);
+	Result->SetNumberField(TEXT("total"), TestsToRun);
+	Result->SetNumberField(TEXT("passed"), Passed);
+	Result->SetNumberField(TEXT("failed"), Failed);
+	Result->SetNumberField(TEXT("skipped"), Skipped);
+	Result->SetArrayField(TEXT("results"), ResultsJson);
+
+	if (MatchingTests.Num() > TestsToRun)
+	{
+		Result->SetNumberField(TEXT("truncated_remaining"), MatchingTests.Num() - TestsToRun);
 	}
 
 	return FMonolithActionResult::Success(Result);
