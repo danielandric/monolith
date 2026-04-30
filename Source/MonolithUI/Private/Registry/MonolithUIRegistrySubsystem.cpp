@@ -372,6 +372,8 @@ void UMonolithUIRegistrySubsystem::RegisterCuratedMappings()
     AddMappingTo(TypeRegistry, FName(TEXT("TextBlock")), TEXT("ColorAndOpacity"),  TEXT("ColorAndOpacity"),  TEXT("Foreground color and opacity."));
     AddMappingTo(TypeRegistry, FName(TEXT("TextBlock")), TEXT("Justification"),    TEXT("Justification"),    TEXT("Horizontal text justification token."));
     AddMappingTo(TypeRegistry, FName(TEXT("TextBlock")), TEXT("AutoWrapText"),     TEXT("AutoWrapText"),     TEXT("Whether the text wraps to fit the slot."));
+    AddMappingTo(TypeRegistry, FName(TEXT("TextBlock")), TEXT("LineHeightPercentage"), TEXT("LineHeightPercentage"), TEXT("Line height scale for text layout."));
+    AddMappingTo(TypeRegistry, FName(TEXT("TextBlock")), TEXT("ApplyLineHeightToBottomLine"), TEXT("ApplyLineHeightToBottomLine"), TEXT("Whether line height adds space below the final line."));
     AddMappingTo(TypeRegistry, FName(TEXT("TextBlock")), TEXT("ShadowOffset"),     TEXT("ShadowOffset"),     TEXT("Drop shadow offset."));
     AddMappingTo(TypeRegistry, FName(TEXT("TextBlock")), TEXT("ShadowColorAndOpacity"), TEXT("ShadowColorAndOpacity"), TEXT("Drop shadow color."));
 

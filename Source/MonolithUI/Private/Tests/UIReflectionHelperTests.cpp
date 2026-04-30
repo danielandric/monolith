@@ -127,6 +127,64 @@ bool FMonolithUIReflectionSetTextTest::RunTest(const FString& /*Parameters*/)
 }
 
 /**
+ * MonolithUI.Reflection.SetTextBlockLineHeight
+ *
+ * TextBlock line-height controls are inherited from UTextLayoutWidget and are
+ * curated generic text-layout paths. Default non-raw mode must write both the
+ * scalar line-height percentage and the final-line spacing flag.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FMonolithUIReflectionSetTextBlockLineHeightTest,
+    "MonolithUI.Reflection.SetTextBlockLineHeight",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FMonolithUIReflectionSetTextBlockLineHeightTest::RunTest(const FString& /*Parameters*/)
+{
+    UMonolithUIRegistrySubsystem* Sub = UMonolithUIRegistrySubsystem::Get();
+    if (!TestNotNull(TEXT("UMonolithUIRegistrySubsystem available"), Sub))
+    {
+        return false;
+    }
+
+    UTextBlock* Widget = MakeScratchTextBlock();
+    if (!TestNotNull(TEXT("scratch TextBlock created"), Widget))
+    {
+        return false;
+    }
+
+    FUIReflectionHelper Helper = MakeSubsystemHelper();
+    const FName Token(TEXT("TextBlock"));
+
+    const TSharedPtr<FJsonValue> LineHeight = MakeShared<FJsonValueNumber>(1.35);
+    const FUIReflectionApplyResult LineHeightRes = Helper.Apply(Widget, TEXT("LineHeightPercentage"), LineHeight);
+    TestTrue(FString::Printf(TEXT("LineHeightPercentage apply succeeded: %s/%s"), *LineHeightRes.FailureReason, *LineHeightRes.Detail), LineHeightRes.bSuccess);
+
+    TSharedPtr<FJsonValue> LineHeightRead;
+    const FUIReflectionApplyResult LineHeightReadRes = Helper.ReadJsonPath(Widget, Token, TEXT("LineHeightPercentage"), LineHeightRead);
+    TestTrue(FString::Printf(TEXT("LineHeightPercentage read succeeded: %s/%s"), *LineHeightReadRes.FailureReason, *LineHeightReadRes.Detail), LineHeightReadRes.bSuccess);
+    TestTrue(TEXT("LineHeightPercentage read value is numeric"), LineHeightRead.IsValid() && LineHeightRead->Type == EJson::Number);
+    if (LineHeightRead.IsValid() && LineHeightRead->Type == EJson::Number)
+    {
+        TestEqual(TEXT("LineHeightPercentage written value"), static_cast<float>(LineHeightRead->AsNumber()), 1.35f);
+    }
+
+    const TSharedPtr<FJsonValue> ApplyToBottomLine = MakeShared<FJsonValueBoolean>(false);
+    const FUIReflectionApplyResult ApplyToBottomLineRes = Helper.Apply(Widget, TEXT("ApplyLineHeightToBottomLine"), ApplyToBottomLine);
+    TestTrue(FString::Printf(TEXT("ApplyLineHeightToBottomLine apply succeeded: %s/%s"), *ApplyToBottomLineRes.FailureReason, *ApplyToBottomLineRes.Detail), ApplyToBottomLineRes.bSuccess);
+
+    TSharedPtr<FJsonValue> ApplyToBottomLineRead;
+    const FUIReflectionApplyResult ApplyToBottomLineReadRes = Helper.ReadJsonPath(Widget, Token, TEXT("ApplyLineHeightToBottomLine"), ApplyToBottomLineRead);
+    TestTrue(FString::Printf(TEXT("ApplyLineHeightToBottomLine read succeeded: %s/%s"), *ApplyToBottomLineReadRes.FailureReason, *ApplyToBottomLineReadRes.Detail), ApplyToBottomLineReadRes.bSuccess);
+    TestTrue(TEXT("ApplyLineHeightToBottomLine read value is boolean"), ApplyToBottomLineRead.IsValid() && ApplyToBottomLineRead->Type == EJson::Boolean);
+    if (ApplyToBottomLineRead.IsValid() && ApplyToBottomLineRead->Type == EJson::Boolean)
+    {
+        TestFalse(TEXT("ApplyLineHeightToBottomLine written value"), ApplyToBottomLineRead->AsBool());
+    }
+
+    return true;
+}
+
+/**
  * MonolithUI.Reflection.GateRejectsUnlistedPath (C3 / C8)
  *
  * Default mode + non-allowlisted path must return bSuccess=false with
