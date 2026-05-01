@@ -39,6 +39,10 @@
 #include "Components/PanelWidget.h"
 #include "Components/CanvasPanel.h"
 #include "Components/VerticalBox.h"
+#include "Components/VerticalBoxSlot.h"
+#include "Components/HorizontalBox.h"
+#include "Components/HorizontalBoxSlot.h"
+#include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
 #include "Components/Image.h"
 
@@ -146,6 +150,127 @@ bool FMonolithUISpecBuilderOneNodeOneWidgetTest::RunTest(const FString& /*Parame
 
     // Counters reflect the 2 widgets we created (root + child).
     TestEqual(TEXT("NodesCreated == 2"), R.NodesCreated, 2);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FMonolithUISpecBuilderSizeAndBoxSlotPrimitivesTest,
+    "MonolithUI.SpecBuilder.SizeAndBoxSlotPrimitives",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FMonolithUISpecBuilderSizeAndBoxSlotPrimitivesTest::RunTest(const FString& /*Parameters*/)
+{
+    using namespace MonolithUI::SpecBuilderTests;
+
+    FUISpecDocument Doc;
+    Doc.Version = 1;
+    Doc.Name = TEXT("SizeAndBoxSlotPrimitives");
+    Doc.ParentClass = TEXT("UserWidget");
+
+    Doc.Root = MakeShared<FUISpecNode>();
+    Doc.Root->Type = FName(TEXT("VerticalBox"));
+    Doc.Root->Id = FName(TEXT("Root"));
+
+    TSharedPtr<FUISpecNode> Row = MakeShared<FUISpecNode>();
+    Row->Type = FName(TEXT("HorizontalBox"));
+    Row->Id = FName(TEXT("Row"));
+    Row->Slot.SizeRule = FName(TEXT("Fill"));
+    Row->Slot.FillWeight = 2.5f;
+
+    TSharedPtr<FUISpecNode> PanelChild = MakeShared<FUISpecNode>();
+    PanelChild->Type = FName(TEXT("SizeBox"));
+    PanelChild->Id = FName(TEXT("Constrained"));
+    PanelChild->Slot.SizeRule = FName(TEXT("Fill"));
+    PanelChild->Slot.FillWeight = 0.f;
+    PanelChild->Style.bOverrideMinDesiredWidth = true;
+    PanelChild->Style.MinDesiredWidth = 0.f;
+    PanelChild->Style.bOverrideMinDesiredHeight = true;
+    PanelChild->Style.MinDesiredHeight = 24.f;
+    PanelChild->Style.bOverrideMaxDesiredWidth = true;
+    PanelChild->Style.MaxDesiredWidth = 480.f;
+    PanelChild->Style.bOverrideMaxDesiredHeight = true;
+    PanelChild->Style.MaxDesiredHeight = 128.f;
+
+    TSharedPtr<FUISpecNode> Label = MakeShared<FUISpecNode>();
+    Label->Type = FName(TEXT("TextBlock"));
+    Label->Id = FName(TEXT("Label"));
+    Label->Content.Text = TEXT("Constrained");
+    PanelChild->Children.Add(Label);
+    Row->Children.Add(PanelChild);
+    Doc.Root->Children.Add(Row);
+
+    const FString AssetPath = MakeTestPath(TEXT("SizeAndBoxSlotPrimitives"));
+    FUISpecBuilderInputs In;
+    In.Document = &Doc;
+    In.AssetPath = AssetPath;
+    In.bOverwrite = true;
+
+    const FUISpecBuilderResult R = FUISpecBuilder::Build(In);
+    TestTrue(TEXT("Build succeeds"), R.bSuccess);
+    if (!R.bSuccess)
+    {
+        for (const FUISpecError& E : R.Errors)
+        {
+            AddError(FString::Printf(TEXT("Err [%s]: %s"), *E.Category.ToString(), *E.Message));
+        }
+        return false;
+    }
+
+    UWidgetBlueprint* WBP = LoadObject<UWidgetBlueprint>(nullptr, *AssetPath);
+    TestNotNull(TEXT("WBP loaded"), WBP);
+    if (!WBP || !WBP->WidgetTree || !WBP->WidgetTree->RootWidget)
+    {
+        return false;
+    }
+
+    UVerticalBox* Root = Cast<UVerticalBox>(WBP->WidgetTree->RootWidget);
+    TestNotNull(TEXT("Root is vertical box"), Root);
+    if (!Root || Root->GetChildrenCount() != 1)
+    {
+        return false;
+    }
+
+    UHorizontalBox* RowWidget = Cast<UHorizontalBox>(Root->GetChildAt(0));
+    TestNotNull(TEXT("Row is horizontal box"), RowWidget);
+    UVerticalBoxSlot* RowSlot = RowWidget ? Cast<UVerticalBoxSlot>(RowWidget->Slot) : nullptr;
+    TestNotNull(TEXT("PanelBuilder applied vertical box slot"), RowSlot);
+    if (RowSlot)
+    {
+        const FSlateChildSize RowSize = RowSlot->GetSize();
+        TestEqual(TEXT("Panel child slot uses Fill"), RowSize.SizeRule.GetValue(), ESlateSizeRule::Fill);
+        TestTrue(TEXT("Panel child fill weight"),
+            FMath::IsNearlyEqual(RowSize.Value, 2.5f));
+    }
+
+    USizeBox* Constrained = RowWidget && RowWidget->GetChildrenCount() == 1
+        ? Cast<USizeBox>(RowWidget->GetChildAt(0)) : nullptr;
+    TestNotNull(TEXT("Constrained child is SizeBox"), Constrained);
+    UHorizontalBoxSlot* ConstrainedSlot = Constrained ? Cast<UHorizontalBoxSlot>(Constrained->Slot) : nullptr;
+    TestNotNull(TEXT("LeafBuilder applied horizontal box slot"), ConstrainedSlot);
+    if (ConstrainedSlot)
+    {
+        const FSlateChildSize ChildSize = ConstrainedSlot->GetSize();
+        TestEqual(TEXT("Leaf child slot uses Fill"), ChildSize.SizeRule.GetValue(), ESlateSizeRule::Fill);
+        TestTrue(TEXT("Leaf child fill weight can be zero"),
+            FMath::IsNearlyEqual(ChildSize.Value, 0.f));
+    }
+
+    if (Constrained)
+    {
+        TestTrue(TEXT("MinDesiredWidth override set"), Constrained->IsMinDesiredWidthOverride());
+        TestTrue(TEXT("MinDesiredWidth can be zero"),
+            FMath::IsNearlyEqual(Constrained->GetMinDesiredWidth(), 0.f));
+        TestTrue(TEXT("MinDesiredHeight override set"), Constrained->IsMinDesiredHeightOverride());
+        TestTrue(TEXT("MinDesiredHeight value"),
+            FMath::IsNearlyEqual(Constrained->GetMinDesiredHeight(), 24.f));
+        TestTrue(TEXT("MaxDesiredWidth override set"), Constrained->IsMaxDesiredWidthOverride());
+        TestTrue(TEXT("MaxDesiredWidth value"),
+            FMath::IsNearlyEqual(Constrained->GetMaxDesiredWidth(), 480.f));
+        TestTrue(TEXT("MaxDesiredHeight override set"), Constrained->IsMaxDesiredHeightOverride());
+        TestTrue(TEXT("MaxDesiredHeight value"),
+            FMath::IsNearlyEqual(Constrained->GetMaxDesiredHeight(), 128.f));
+    }
+
     return true;
 }
 

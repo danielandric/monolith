@@ -43,7 +43,9 @@
 #include "Components/PanelWidget.h"
 #include "Components/CanvasPanel.h"
 #include "Components/VerticalBox.h"
+#include "Components/VerticalBoxSlot.h"
 #include "Components/HorizontalBox.h"
+#include "Components/HorizontalBoxSlot.h"
 #include "Components/Overlay.h"
 #include "Components/ScrollBox.h"
 #include "Components/GridPanel.h"
@@ -209,6 +211,14 @@ bool FMonolithUISpecSerializerSupportedFieldsTest::RunTest(const FString& /*Para
     Frame->Style.Width = 320.f;
     Frame->Style.Height = 96.f;
     Frame->Style.bUseCustomSize = true;
+    Frame->Style.bOverrideMinDesiredWidth = true;
+    Frame->Style.MinDesiredWidth = 0.f;
+    Frame->Style.bOverrideMinDesiredHeight = true;
+    Frame->Style.MinDesiredHeight = 32.f;
+    Frame->Style.bOverrideMaxDesiredWidth = true;
+    Frame->Style.MaxDesiredWidth = 640.f;
+    Frame->Style.bOverrideMaxDesiredHeight = true;
+    Frame->Style.MaxDesiredHeight = 256.f;
 
     TSharedPtr<FUISpecNode> Label = MakeShared<FUISpecNode>();
     Label->Type = FName(TEXT("TextBlock"));
@@ -263,6 +273,14 @@ bool FMonolithUISpecSerializerSupportedFieldsTest::RunTest(const FString& /*Para
     TestEqual(TEXT("Frame width"), DumpedFrame.Style.Width, 320.f);
     TestEqual(TEXT("Frame height"), DumpedFrame.Style.Height, 96.f);
     TestTrue(TEXT("Frame uses custom size"), DumpedFrame.Style.bUseCustomSize);
+    TestTrue(TEXT("Frame min width override"), DumpedFrame.Style.bOverrideMinDesiredWidth);
+    TestEqual(TEXT("Frame min width can be zero"), DumpedFrame.Style.MinDesiredWidth, 0.f);
+    TestTrue(TEXT("Frame min height override"), DumpedFrame.Style.bOverrideMinDesiredHeight);
+    TestEqual(TEXT("Frame min height"), DumpedFrame.Style.MinDesiredHeight, 32.f);
+    TestTrue(TEXT("Frame max width override"), DumpedFrame.Style.bOverrideMaxDesiredWidth);
+    TestEqual(TEXT("Frame max width"), DumpedFrame.Style.MaxDesiredWidth, 640.f);
+    TestTrue(TEXT("Frame max height override"), DumpedFrame.Style.bOverrideMaxDesiredHeight);
+    TestEqual(TEXT("Frame max height"), DumpedFrame.Style.MaxDesiredHeight, 256.f);
 
     TestEqual(TEXT("Frame child count"), DumpedFrame.Children.Num(), 1);
     if (DumpedFrame.Children.Num() != 1 || !DumpedFrame.Children[0].IsValid())
@@ -277,6 +295,120 @@ bool FMonolithUISpecSerializerSupportedFieldsTest::RunTest(const FString& /*Para
     TestTrue(TEXT("Label font color roundtrips"),
         NearlyEqualColor(DumpedLabel.Content.FontColor, Label->Content.FontColor));
 
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FMonolithUISpecSerializerBoxSlotFillTest,
+    "MonolithUI.SpecSerializer.BoxSlotFill",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FMonolithUISpecSerializerBoxSlotFillTest::RunTest(const FString& /*Parameters*/)
+{
+    using namespace MonolithUI::SpecRoundtripTests;
+
+    FUISpecDocument Doc;
+    Doc.Version = 1;
+    Doc.Name = TEXT("Roundtrip_BoxSlotFill");
+    Doc.ParentClass = TEXT("UserWidget");
+
+    Doc.Root = MakeShared<FUISpecNode>();
+    Doc.Root->Type = FName(TEXT("VerticalBox"));
+    Doc.Root->Id = FName(TEXT("Root"));
+
+    TSharedPtr<FUISpecNode> Row = MakeShared<FUISpecNode>();
+    Row->Type = FName(TEXT("HorizontalBox"));
+    Row->Id = FName(TEXT("Row"));
+    Row->Slot.SizeRule = FName(TEXT("Fill"));
+    Row->Slot.FillWeight = 3.f;
+
+    TSharedPtr<FUISpecNode> Leaf = MakeShared<FUISpecNode>();
+    Leaf->Type = FName(TEXT("TextBlock"));
+    Leaf->Id = FName(TEXT("Leaf"));
+    Leaf->Content.Text = TEXT("fills");
+    Leaf->Slot.SizeRule = FName(TEXT("Fill"));
+    Leaf->Slot.FillWeight = 0.5f;
+
+    Row->Children.Add(Leaf);
+    Doc.Root->Children.Add(Row);
+
+    const FString AssetPath = MakeTestPath(TEXT("BoxSlotFill"));
+    FUISpecBuilderInputs BuildIn;
+    BuildIn.Document = &Doc;
+    BuildIn.AssetPath = AssetPath;
+    BuildIn.bOverwrite = true;
+
+    const FUISpecBuilderResult BuildR = FUISpecBuilder::Build(BuildIn);
+    TestTrue(TEXT("Box-slot build succeeds"), BuildR.bSuccess);
+    if (!BuildR.bSuccess)
+    {
+        for (const FUISpecError& E : BuildR.Errors)
+        {
+            AddError(FString::Printf(TEXT("Build err [%s]: %s"), *E.Category.ToString(), *E.Message));
+        }
+        return false;
+    }
+
+    FUISpecSerializerInputs DumpIn;
+    DumpIn.AssetPath = AssetPath;
+    const FUISpecSerializerResult DumpR = FUISpecSerializer::Dump(DumpIn);
+    TestTrue(TEXT("Box-slot dump succeeds"), DumpR.bSuccess);
+    if (!DumpR.bSuccess || !DumpR.Document.Root.IsValid()
+        || DumpR.Document.Root->Children.Num() != 1
+        || !DumpR.Document.Root->Children[0].IsValid())
+    {
+        return false;
+    }
+
+    const FUISpecNode& DumpedRow = *DumpR.Document.Root->Children[0];
+    TestEqual(TEXT("Row slot size rule"), DumpedRow.Slot.SizeRule, FName(TEXT("Fill")));
+    TestTrue(TEXT("Row fill weight"),
+        FMath::IsNearlyEqual(DumpedRow.Slot.FillWeight, 3.f));
+    if (DumpedRow.Children.Num() != 1 || !DumpedRow.Children[0].IsValid())
+    {
+        return false;
+    }
+
+    const FUISpecNode& DumpedLeaf = *DumpedRow.Children[0];
+    TestEqual(TEXT("Leaf slot size rule"), DumpedLeaf.Slot.SizeRule, FName(TEXT("Fill")));
+    TestTrue(TEXT("Leaf fill weight"),
+        FMath::IsNearlyEqual(DumpedLeaf.Slot.FillWeight, 0.5f));
+
+    FUISpecBuilderInputs RebuildIn;
+    RebuildIn.Document = &DumpR.Document;
+    RebuildIn.AssetPath = MakeTestPath(TEXT("BoxSlotFill_Rebuilt"));
+    RebuildIn.bOverwrite = true;
+    const FUISpecBuilderResult RebuildR = FUISpecBuilder::Build(RebuildIn);
+    TestTrue(TEXT("Rebuild from dumped doc succeeds"), RebuildR.bSuccess);
+    if (!RebuildR.bSuccess)
+    {
+        return false;
+    }
+
+    UWidgetBlueprint* RebuiltWBP = LoadObject<UWidgetBlueprint>(nullptr, *RebuildIn.AssetPath);
+    UVerticalBox* Root = RebuiltWBP && RebuiltWBP->WidgetTree
+        ? Cast<UVerticalBox>(RebuiltWBP->WidgetTree->RootWidget) : nullptr;
+    UHorizontalBox* RebuiltRow = Root && Root->GetChildrenCount() == 1
+        ? Cast<UHorizontalBox>(Root->GetChildAt(0)) : nullptr;
+    UVerticalBoxSlot* RebuiltRowSlot = RebuiltRow ? Cast<UVerticalBoxSlot>(RebuiltRow->Slot) : nullptr;
+    TestNotNull(TEXT("Rebuilt row slot"), RebuiltRowSlot);
+    if (RebuiltRowSlot)
+    {
+        const FSlateChildSize RowSize = RebuiltRowSlot->GetSize();
+        TestEqual(TEXT("Rebuilt row uses Fill"), RowSize.SizeRule.GetValue(), ESlateSizeRule::Fill);
+        TestTrue(TEXT("Rebuilt row weight"), FMath::IsNearlyEqual(RowSize.Value, 3.f));
+    }
+
+    UTextBlock* RebuiltLeaf = RebuiltRow && RebuiltRow->GetChildrenCount() == 1
+        ? Cast<UTextBlock>(RebuiltRow->GetChildAt(0)) : nullptr;
+    UHorizontalBoxSlot* RebuiltLeafSlot = RebuiltLeaf ? Cast<UHorizontalBoxSlot>(RebuiltLeaf->Slot) : nullptr;
+    TestNotNull(TEXT("Rebuilt leaf slot"), RebuiltLeafSlot);
+    if (RebuiltLeafSlot)
+    {
+        const FSlateChildSize LeafSize = RebuiltLeafSlot->GetSize();
+        TestEqual(TEXT("Rebuilt leaf uses Fill"), LeafSize.SizeRule.GetValue(), ESlateSizeRule::Fill);
+        TestTrue(TEXT("Rebuilt leaf weight"), FMath::IsNearlyEqual(LeafSize.Value, 0.5f));
+    }
     return true;
 }
 

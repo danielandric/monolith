@@ -383,7 +383,7 @@ ui::build_ui_from_spec({
 3. Walk the `WidgetTree->RootWidget` recursively, building `FUISpecNode` per widget with:
    - **Type token** -- registry-mapped via `FUITypeRegistry::FindByClass`, falling back to `MakeTokenFromClassName` (strips the engine `U` prefix) when the registry hasn't classified the type.
    - **Slot** -- per-`UPanelSlot` derived class branch table covering ALL stock UMG slot types (Canvas / Vertical / Horizontal / Overlay / ScrollBox / Grid / UniformGrid / SizeBox / ScaleBox / WrapBox / WidgetSwitcher / Border). Canvas slots reverse-map every curated `anchorPreset` accepted by the builder. Closes the §6.3.3 surface-map gap (the legacy `SerializeSlotProperties` covered only Canvas/Vertical/Horizontal/Overlay -- 4 of 12+).
-   - **Style** -- widget-level `RenderOpacity` + `Visibility` always, plus `SizeBox` width/height overrides, `Border` brush colour + padding, `ProgressBar` fill colour. Reads via the engine's public getters (`GetBrushColor`, `GetFillColorAndOpacity`, etc.) -- the deprecated direct UPROPERTY accessors are avoided.
+   - **Style** -- widget-level `RenderOpacity` + `Visibility` always, plus `SizeBox` width/height and min/max desired overrides, `Border` brush colour + padding, `ProgressBar` fill colour. Reads via the engine's public getters (`GetBrushColor`, `GetFillColorAndOpacity`, etc.) -- the deprecated direct UPROPERTY accessors are avoided.
    - **Content** -- per-widget-class branches for `UTextBlock` (text, font size, font color, AutoWrapText -> WrapMode token), `URichTextBlock`, `UImage` (BrushPath via `B.GetResourceObject()->GetPathName()`), `UEditableText` / `UEditableTextBox` (text + hint).
    - **Effect** (`bHasEffect`) -- when the widget IS-A `UEffectSurface`, capture the entire `FEffectSurfaceConfig`: corner radii, smoothness, solid colour, backdrop blur strength, and the **DropShadow / InnerShadow arrays** via a hand-rolled array path (the Phase H `ApplyJsonPath` helper deliberately does not navigate `TArray` container properties; Phase J implements both the symmetric read here AND the matching write).
    - **CommonUI** (`bHasCommonUI`, `WITH_COMMONUI`) -- detect `UCommonButtonBase` / `UCommonActivatableWidget` / `UCommonUserWidget`; capture the button's style class via `GetStyleCDO()->GetClass()->GetPathName()` into `StyleRefs`.
@@ -429,8 +429,8 @@ ui::dump_ui_spec({
 | Slot Class | Phase J Coverage | Captured fields |
 |---|---|---|
 | `UCanvasPanelSlot` | Full | anchorPreset when it matches a curated builder preset, offsets (Position, Size), alignment, autoSize, zOrder |
-| `UVerticalBoxSlot` | Full | hAlign, vAlign, padding |
-| `UHorizontalBoxSlot` | Full | hAlign, vAlign, padding |
+| `UVerticalBoxSlot` | Full | hAlign, vAlign, padding, sizeRule, fillWeight |
+| `UHorizontalBoxSlot` | Full | hAlign, vAlign, padding, sizeRule, fillWeight |
 | `UOverlaySlot` | Full | hAlign, vAlign, padding |
 | `UScrollBoxSlot` | Full | hAlign, vAlign, padding |
 | `UGridSlot` | Full | hAlign, vAlign, padding, row/column (in Position), rowSpan/columnSpan (in Size), layer (in zOrder) |
@@ -625,7 +625,7 @@ The `TObjectIterator<UClass>` walk skips:
 
 Mappings are explicit, NOT auto-generated from `UPROPERTY` reflection. Auto-walking would surface engine-internal transient flags that should never be writable from a JSON spec — the allowlist is a security gate as well as a correctness one. Phase B ships mappings for: `Border` (Background, BrushColor, Padding, ContentColorAndOpacity), `SizeBox` (Width/HeightOverride, Min/MaxDesired*), `TextBlock` (Text, Font, ColorAndOpacity, Justification, AutoWrapText, LineHeightPercentage, ApplyLineHeightToBottomLine, Shadow*), `Image` (Brush, ColorAndOpacity), `Button` (ColorAndOpacity, BackgroundColor, Style, ClickMethod, IsFocusable), `ProgressBar` (Percent, FillColorAndOpacity, BarFillType), and the plugin widget `RoundedBorder` (CornerRadii, OutlineColor, OutlineWidth, FillColor + inherited Border properties).
 
-Slot.* paths (`Slot.Padding`, `Slot.HAlign`, `Slot.VAlign`, `Slot.Anchors`, `Slot.Position`, `Slot.Size`, `Slot.Alignment`, `Slot.AutoSize`, `Slot.ZOrder`) are attached to the COMMON child widgets (TextBlock, Image, Button, Border, SizeBox, ProgressBar, the box panels, ScrollBox, RoundedBorder). The reflection helper performs per-parent-slot validation at write time — the allowlist is the generous outer envelope.
+Slot.* paths (`Slot.Padding`, `Slot.HAlign`, `Slot.VAlign`, `Slot.Anchors`, `Slot.Position`, `Slot.Size`, `Slot.SizeRule`, `Slot.FillWeight`, `Slot.Alignment`, `Slot.AutoSize`, `Slot.ZOrder`) are attached to the COMMON child widgets (TextBlock, Image, Button, Border, SizeBox, ProgressBar, the box panels, ScrollBox, RoundedBorder). The reflection helper performs per-parent-slot validation at write time — the allowlist is the generous outer envelope.
 
 ### Diagnostic action
 

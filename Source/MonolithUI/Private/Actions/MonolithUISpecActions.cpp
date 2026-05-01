@@ -129,6 +129,8 @@ namespace MonolithUI::SpecActionsInternal
         OutSlot.ZOrder       = (int32)GetNumberField(Obj, TEXT("zOrder"));
         OutSlot.HAlign       = GetFNameField(Obj, TEXT("hAlign"));
         OutSlot.VAlign       = GetFNameField(Obj, TEXT("vAlign"));
+        OutSlot.SizeRule     = GetFNameField(Obj, TEXT("sizeRule"));
+        OutSlot.FillWeight   = (float)GetNumberField(Obj, TEXT("fillWeight"), 1.0);
 
         const TSharedPtr<FJsonObject>* Sub = nullptr;
         if (Obj->TryGetObjectField(TEXT("position"), Sub) && Sub) OutSlot.Position = ParseVec2(*Sub);
@@ -145,6 +147,31 @@ namespace MonolithUI::SpecActionsInternal
         OutStyle.Opacity      = (float)GetNumberField(Obj, TEXT("opacity"), 1.0);
         OutStyle.BorderWidth  = (float)GetNumberField(Obj, TEXT("borderWidth"));
         OutStyle.bUseCustomSize = GetBoolField(Obj, TEXT("useCustomSize"));
+        double DesiredValue = 0.0;
+        OutStyle.bOverrideMinDesiredWidth = GetBoolField(Obj, TEXT("overrideMinDesiredWidth"));
+        if (Obj->TryGetNumberField(TEXT("minDesiredWidth"), DesiredValue))
+        {
+            OutStyle.bOverrideMinDesiredWidth = true;
+            OutStyle.MinDesiredWidth = (float)DesiredValue;
+        }
+        OutStyle.bOverrideMinDesiredHeight = GetBoolField(Obj, TEXT("overrideMinDesiredHeight"));
+        if (Obj->TryGetNumberField(TEXT("minDesiredHeight"), DesiredValue))
+        {
+            OutStyle.bOverrideMinDesiredHeight = true;
+            OutStyle.MinDesiredHeight = (float)DesiredValue;
+        }
+        OutStyle.bOverrideMaxDesiredWidth = GetBoolField(Obj, TEXT("overrideMaxDesiredWidth"));
+        if (Obj->TryGetNumberField(TEXT("maxDesiredWidth"), DesiredValue))
+        {
+            OutStyle.bOverrideMaxDesiredWidth = true;
+            OutStyle.MaxDesiredWidth = (float)DesiredValue;
+        }
+        OutStyle.bOverrideMaxDesiredHeight = GetBoolField(Obj, TEXT("overrideMaxDesiredHeight"));
+        if (Obj->TryGetNumberField(TEXT("maxDesiredHeight"), DesiredValue))
+        {
+            OutStyle.bOverrideMaxDesiredHeight = true;
+            OutStyle.MaxDesiredHeight = (float)DesiredValue;
+        }
         OutStyle.Visibility   = GetFNameField(Obj, TEXT("visibility"));
         OutStyle.Background   = ParseColor(Obj, TEXT("background"));
         OutStyle.BorderColor  = ParseColor(Obj, TEXT("borderColor"));
@@ -590,8 +617,8 @@ namespace MonolithUI::SpecActionsInternal
             };
             AddField(TEXT("type"),            TEXT("string"),  TEXT("Widget type token resolved through FUITypeRegistry (e.g. 'VerticalBox', 'TextBlock', 'EffectSurface')."));
             AddField(TEXT("id"),              TEXT("string"),  TEXT("Variable name of the widget on the WBP. Must be unique within the spec."));
-            AddField(TEXT("slot"),            TEXT("object"),  TEXT("FUISpecSlot (anchorPreset / position / size / alignment / padding / autoSize / hAlign / vAlign / zOrder)."));
-            AddField(TEXT("style"),           TEXT("object"),  TEXT("FUISpecStyle (width / height / padding / background / borderColor / borderWidth / opacity / visibility)."));
+            AddField(TEXT("slot"),            TEXT("object"),  TEXT("FUISpecSlot (anchorPreset / position / size / alignment / padding / autoSize / hAlign / vAlign / zOrder / sizeRule / fillWeight)."));
+            AddField(TEXT("style"),           TEXT("object"),  TEXT("FUISpecStyle (width / height / minDesiredWidth / minDesiredHeight / maxDesiredWidth / maxDesiredHeight / override flags / padding / background / borderColor / borderWidth / opacity / visibility)."));
             AddField(TEXT("content"),         TEXT("object"),  TEXT("FUISpecContent (text / fontSize / fontColor / wrapMode / brushPath / placeholder)."));
             AddField(TEXT("effect"),          TEXT("object"),  TEXT("FUISpecEffect — UEffectSurface only. Sub-bag triggers bHasEffect."));
             AddField(TEXT("commonUI"),        TEXT("object"),  TEXT("FUISpecCommonUI (inputLayer / inputMode / styleRefs[]). Sub-bag triggers bHasCommonUI."));
@@ -646,6 +673,11 @@ namespace MonolithUI::SpecActionsInternal
         if (!S.AnchorPreset.IsNone()) Out->SetStringField(TEXT("anchorPreset"), S.AnchorPreset.ToString());
         if (!S.HAlign.IsNone())       Out->SetStringField(TEXT("hAlign"), S.HAlign.ToString());
         if (!S.VAlign.IsNone())       Out->SetStringField(TEXT("vAlign"), S.VAlign.ToString());
+        if (!S.SizeRule.IsNone())
+        {
+            Out->SetStringField(TEXT("sizeRule"), S.SizeRule.ToString());
+            Out->SetNumberField(TEXT("fillWeight"), S.FillWeight);
+        }
         if (S.bAutoSize)              Out->SetBoolField(TEXT("autoSize"), true);
         if (S.ZOrder != 0)            Out->SetNumberField(TEXT("zOrder"), S.ZOrder);
 
@@ -686,6 +718,26 @@ namespace MonolithUI::SpecActionsInternal
         TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
         if (S.Width  != 0.f) Out->SetNumberField(TEXT("width"),  S.Width);
         if (S.Height != 0.f) Out->SetNumberField(TEXT("height"), S.Height);
+        if (S.bOverrideMinDesiredWidth)
+        {
+            Out->SetBoolField(TEXT("overrideMinDesiredWidth"), true);
+            Out->SetNumberField(TEXT("minDesiredWidth"), S.MinDesiredWidth);
+        }
+        if (S.bOverrideMinDesiredHeight)
+        {
+            Out->SetBoolField(TEXT("overrideMinDesiredHeight"), true);
+            Out->SetNumberField(TEXT("minDesiredHeight"), S.MinDesiredHeight);
+        }
+        if (S.bOverrideMaxDesiredWidth)
+        {
+            Out->SetBoolField(TEXT("overrideMaxDesiredWidth"), true);
+            Out->SetNumberField(TEXT("maxDesiredWidth"), S.MaxDesiredWidth);
+        }
+        if (S.bOverrideMaxDesiredHeight)
+        {
+            Out->SetBoolField(TEXT("overrideMaxDesiredHeight"), true);
+            Out->SetNumberField(TEXT("maxDesiredHeight"), S.MaxDesiredHeight);
+        }
         if (S.BorderWidth != 0.f) Out->SetNumberField(TEXT("borderWidth"), S.BorderWidth);
         Out->SetNumberField(TEXT("opacity"), S.Opacity);
         if (S.bUseCustomSize) Out->SetBoolField(TEXT("useCustomSize"), true);

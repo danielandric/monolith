@@ -16,9 +16,10 @@
 //   * ALL stock UMG panel-slot types (Canvas, Vertical, Horizontal, Overlay,
 //     ScrollBox, Grid, UniformGrid, SizeBox, ScaleBox, WrapBox, WidgetSwitcher,
 //     Border) -- not just the four the legacy `SerializeSlotProperties` knew.
-//   * Style sub-bag (width/height/padding/background/borderColor/borderWidth/
-//     opacity/visibility) read via the registry's curated property mapping +
-//     direct reflection where the mapping is silent.
+//   * Style sub-bag (width/height, SizeBox min/max desired constraints,
+//     padding/background/borderColor/borderWidth/opacity/visibility) read via
+//     the registry's curated property mapping + direct reflection where the
+//     mapping is silent.
 //   * Content sub-bag (text/font size/font color/wrap mode/brush path/placeholder)
 //   * Effect sub-bag (corner radii / smoothness / solid color / drop shadow array
 //     / inner shadow array / backdrop blur strength) when the widget IS-A

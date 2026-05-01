@@ -327,7 +327,8 @@ namespace
         AddMappingTo(Registry, Token, TEXT("Slot.Padding"),    TEXT("Slot.Padding"),    TEXT("Padding margin within the box slot."));
         AddMappingTo(Registry, Token, TEXT("Slot.HAlign"),     TEXT("Slot.HorizontalAlignment"), TEXT("Horizontal alignment within the box slot."));
         AddMappingTo(Registry, Token, TEXT("Slot.VAlign"),     TEXT("Slot.VerticalAlignment"),   TEXT("Vertical alignment within the box slot."));
-        AddMappingTo(Registry, Token, TEXT("Slot.Size"),       TEXT("Slot.Size"),       TEXT("Auto/Fill size rule within the box slot."));
+        AddMappingTo(Registry, Token, TEXT("Slot.SizeRule"),   TEXT("Slot.Size.SizeRule"), TEXT("Automatic/Fill size rule within the box slot."));
+        AddMappingTo(Registry, Token, TEXT("Slot.FillWeight"), TEXT("Slot.Size.Value"),    TEXT("Fill weight within the box slot."));
     }
 }
 

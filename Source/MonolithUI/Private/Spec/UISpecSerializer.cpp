@@ -250,6 +250,9 @@ namespace MonolithUI::SpecSerializerInternal
             OutSlot.HAlign  = HAlignToToken(VS->GetHorizontalAlignment());
             OutSlot.VAlign  = VAlignToToken(VS->GetVerticalAlignment());
             OutSlot.Padding = VS->GetPadding();
+            const FSlateChildSize Size = VS->GetSize();
+            OutSlot.SizeRule = Size.SizeRule == ESlateSizeRule::Fill ? FName(TEXT("Fill")) : FName(TEXT("Automatic"));
+            OutSlot.FillWeight = Size.Value;
             return;
         }
         if (UHorizontalBoxSlot* HS = Cast<UHorizontalBoxSlot>(Slot))
@@ -257,6 +260,9 @@ namespace MonolithUI::SpecSerializerInternal
             OutSlot.HAlign  = HAlignToToken(HS->GetHorizontalAlignment());
             OutSlot.VAlign  = VAlignToToken(HS->GetVerticalAlignment());
             OutSlot.Padding = HS->GetPadding();
+            const FSlateChildSize Size = HS->GetSize();
+            OutSlot.SizeRule = Size.SizeRule == ESlateSizeRule::Fill ? FName(TEXT("Fill")) : FName(TEXT("Automatic"));
+            OutSlot.FillWeight = Size.Value;
             return;
         }
         if (UOverlaySlot* OS = Cast<UOverlaySlot>(Slot))
@@ -419,6 +425,14 @@ namespace MonolithUI::SpecSerializerInternal
             OutStyle.Width  = W;
             OutStyle.Height = H;
             OutStyle.bUseCustomSize = (W > 0.f) || (H > 0.f);
+            OutStyle.bOverrideMinDesiredWidth = SB->IsMinDesiredWidthOverride();
+            OutStyle.MinDesiredWidth = OutStyle.bOverrideMinDesiredWidth ? SB->GetMinDesiredWidth() : 0.f;
+            OutStyle.bOverrideMinDesiredHeight = SB->IsMinDesiredHeightOverride();
+            OutStyle.MinDesiredHeight = OutStyle.bOverrideMinDesiredHeight ? SB->GetMinDesiredHeight() : 0.f;
+            OutStyle.bOverrideMaxDesiredWidth = SB->IsMaxDesiredWidthOverride();
+            OutStyle.MaxDesiredWidth = OutStyle.bOverrideMaxDesiredWidth ? SB->GetMaxDesiredWidth() : 0.f;
+            OutStyle.bOverrideMaxDesiredHeight = SB->IsMaxDesiredHeightOverride();
+            OutStyle.MaxDesiredHeight = OutStyle.bOverrideMaxDesiredHeight ? SB->GetMaxDesiredHeight() : 0.f;
         }
 
         // Border background / brush colour. GetBrushColor() returns the

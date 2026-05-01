@@ -81,6 +81,24 @@ namespace MonolithUI::PanelBuilderInternal
         }
     }
 
+    static FSlateChildSize MakeBoxSlotSize(const FUISpecSlot& S)
+    {
+        const FString Rule = S.SizeRule.ToString();
+        FSlateChildSize Size(
+            Rule == TEXT("Fill") ? ESlateSizeRule::Fill : ESlateSizeRule::Automatic);
+        if (Size.SizeRule == ESlateSizeRule::Fill)
+        {
+            Size.Value = S.FillWeight;
+        }
+        return Size;
+    }
+
+    static bool HasBoxSlotSizeRule(const FUISpecSlot& S)
+    {
+        const FString Rule = S.SizeRule.ToString();
+        return Rule == TEXT("Automatic") || Rule == TEXT("Fill");
+    }
+
     static void ApplyAlignmentOnly(const FUISpecSlot& S, UScaleBoxSlot* Slot)
     {
         if (!Slot)
@@ -229,10 +247,18 @@ namespace MonolithUI::PanelBuilderInternal
         else if (UVerticalBoxSlot* VSlot = Cast<UVerticalBoxSlot>(Slot))
         {
             ApplyAlignmentAndPadding(S, VSlot);
+            if (HasBoxSlotSizeRule(S))
+            {
+                VSlot->SetSize(MakeBoxSlotSize(S));
+            }
         }
         else if (UHorizontalBoxSlot* HSlot = Cast<UHorizontalBoxSlot>(Slot))
         {
             ApplyAlignmentAndPadding(S, HSlot);
+            if (HasBoxSlotSizeRule(S))
+            {
+                HSlot->SetSize(MakeBoxSlotSize(S));
+            }
         }
         else if (UOverlaySlot* OSlot = Cast<UOverlaySlot>(Slot))
         {
@@ -336,6 +362,22 @@ namespace MonolithUI::PanelBuilderInternal
             if (S.Height > 0.f)
             {
                 SizeBox->SetHeightOverride(S.Height);
+            }
+            if (S.bOverrideMinDesiredWidth)
+            {
+                SizeBox->SetMinDesiredWidth(S.MinDesiredWidth);
+            }
+            if (S.bOverrideMinDesiredHeight)
+            {
+                SizeBox->SetMinDesiredHeight(S.MinDesiredHeight);
+            }
+            if (S.bOverrideMaxDesiredWidth)
+            {
+                SizeBox->SetMaxDesiredWidth(S.MaxDesiredWidth);
+            }
+            if (S.bOverrideMaxDesiredHeight)
+            {
+                SizeBox->SetMaxDesiredHeight(S.MaxDesiredHeight);
             }
         }
         if (UBorder* Border = Cast<UBorder>(Widget))

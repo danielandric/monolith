@@ -201,6 +201,14 @@ struct MONOLITHUI_API FUISpecSlot
     /** Vertical alignment token (Top/Center/Bottom/Fill). */
     UPROPERTY(BlueprintReadWrite, Category = "MonolithUI|Spec")
     FName VAlign;
+
+    /** Box slot size rule token (Automatic/Fill). Applies to vertical and horizontal box slots. */
+    UPROPERTY(BlueprintReadWrite, Category = "MonolithUI|Spec")
+    FName SizeRule;
+
+    /** Fill weight for box slots when SizeRule is Fill. Zero is valid when SizeRule is authored. */
+    UPROPERTY(BlueprintReadWrite, Category = "MonolithUI|Spec")
+    float FillWeight = 1.f;
 };
 
 /**
@@ -219,6 +227,22 @@ struct MONOLITHUI_API FUISpecStyle
     /** Optional explicit height (0 = unset). */
     UPROPERTY(BlueprintReadWrite, Category = "MonolithUI|Spec")
     float Height = 0.f;
+
+    /** Optional minimum desired width for SizeBox. Guarded by bOverrideMinDesiredWidth. */
+    UPROPERTY(BlueprintReadWrite, Category = "MonolithUI|Spec")
+    float MinDesiredWidth = 0.f;
+
+    /** Optional minimum desired height for SizeBox. Guarded by bOverrideMinDesiredHeight. */
+    UPROPERTY(BlueprintReadWrite, Category = "MonolithUI|Spec")
+    float MinDesiredHeight = 0.f;
+
+    /** Optional maximum desired width for SizeBox. Guarded by bOverrideMaxDesiredWidth. */
+    UPROPERTY(BlueprintReadWrite, Category = "MonolithUI|Spec")
+    float MaxDesiredWidth = 0.f;
+
+    /** Optional maximum desired height for SizeBox. Guarded by bOverrideMaxDesiredHeight. */
+    UPROPERTY(BlueprintReadWrite, Category = "MonolithUI|Spec")
+    float MaxDesiredHeight = 0.f;
 
     /** Inner padding (applied via SizeBox/Border/etc. depending on widget). */
     UPROPERTY(BlueprintReadWrite, Category = "MonolithUI|Spec")
@@ -247,6 +271,22 @@ struct MONOLITHUI_API FUISpecStyle
     /** Whether the widget enforces an explicit size (drives SizeBox usage). */
     UPROPERTY(BlueprintReadWrite, Category = "MonolithUI|Spec")
     bool bUseCustomSize = false;
+
+    /** Enables MinDesiredWidth even when the value is 0. */
+    UPROPERTY(BlueprintReadWrite, Category = "MonolithUI|Spec")
+    bool bOverrideMinDesiredWidth = false;
+
+    /** Enables MinDesiredHeight even when the value is 0. */
+    UPROPERTY(BlueprintReadWrite, Category = "MonolithUI|Spec")
+    bool bOverrideMinDesiredHeight = false;
+
+    /** Enables MaxDesiredWidth even when the value is 0. */
+    UPROPERTY(BlueprintReadWrite, Category = "MonolithUI|Spec")
+    bool bOverrideMaxDesiredWidth = false;
+
+    /** Enables MaxDesiredHeight even when the value is 0. */
+    UPROPERTY(BlueprintReadWrite, Category = "MonolithUI|Spec")
+    bool bOverrideMaxDesiredHeight = false;
 };
 
 /**
