@@ -862,7 +862,7 @@ Auto-updater rewrite — fixes all swap script failures on Windows.
 
 - **Auto-Updater** — Swap script now polls `tasklist` for `UnrealEditor.exe` instead of a cosmetic 10-second countdown (was launching before editor fully exited)
 - **Auto-Updater** — `errorlevel` check after retry rename was unreachable due to cmd.exe resetting `%ERRORLEVEL%` on closing `)` — replaced with `goto` pattern
-- **Auto-Updater** — Launcher script now uses outer-double-quote trick for `cmd /c` paths with spaces (`D:\Unreal Projects\...`)
+- **Auto-Updater** — Launcher script now uses outer-double-quote trick for `cmd /c` paths with spaces (e.g. paths under `Documents\Unreal Projects\...`)
 - **Auto-Updater** — Switched from `ren` (bare filename only) to `move` (full path support) for plugin folder rename
 - **Auto-Updater** — Retry now cleans stale backup before re-attempting rename
 - **Auto-Updater** — Rollback on failed xcopy now removes partial destination before restoring backup
